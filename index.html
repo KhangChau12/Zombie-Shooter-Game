@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zombie Apocalypse Shooter</title>
+    <link href="styles.css" rel="stylesheet">
+    <link href="screen-flash.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="gameUI">
+            <div class="ui-section">
+                <div class="stat-header">Health <span id="health">100</span>/<span id="maxHealth">100</span></div>
+                <div class="stat-bar">
+                    <div class="stat-bar-fill health-bar-fill" id="healthBar"></div>
+                </div>
+                
+                <div class="stat-header">Armor <span id="armor">0</span>/<span id="maxArmor">100</span></div>
+                <div class="stat-bar">
+                    <div class="stat-bar-fill armor-bar-fill" id="armorBar"></div>
+                </div>
+                
+                <div class="stat-header">Experience <span id="xp">0</span>/<span id="xpNext">100</span></div>
+                <div class="stat-bar">
+                    <div class="stat-bar-fill xp-bar-fill" id="xpBar"></div>
+                </div>
+                
+                <div class="stat-header">Ammo <span id="ammo">30</span>/<span id="maxAmmo">30</span></div>
+                <div class="stat-bar">
+                    <div class="stat-bar-fill ammo-bar-fill" id="ammoBar"></div>
+                </div>
+            </div>
+            
+            <div class="ui-section stats-section">
+                <div class="stat-row">Level: <span id="level">1</span></div>
+                <div class="stat-row">Coins: <span id="coins">0</span></div>
+                <div class="stat-row">Kills: <span id="kills">0</span></div>
+                <div class="stat-row">Explored: <span id="explored">0</span></div>
+                <div class="stat-row">Distance: <span id="distance">0</span>m</div>
+            </div>
+            
+            <div class="ui-section">
+                <div class="player-stats-header">Character Stats</div>
+                <div class="stat-row">Base Damage: <span id="baseDamage">10</span></div>
+                <div class="stat-row">Crit Chance: <span id="critChance">5</span>%</div>
+                <div class="stat-row">Move Speed: <span id="moveSpeed">5</span></div>
+                <div class="stat-row">Fire Rate: <span id="fireRate">2.9</span>/s</div>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="shopButton" class="action-button">Shop (E)</button>
+                <button id="weaponUpgradeButton" class="action-button">Upgrade Weapon</button>
+            </div>
+        </div>
+        
+        <div id="minimap"></div>
+        
+        <div id="gameOver" class="modal">
+            <div class="modal-content">
+                <h2>Game Over</h2>
+                <p>You survived for <span id="survivalTime">0</span> and killed <span id="finalKills">0</span> zombies</p>
+                <p>Highest level reached: <span id="finalLevel">1</span></p>
+                <button id="restartButton">Play Again</button>
+            </div>
+        </div>
+        
+        <div id="levelUp" class="modal">
+            <div class="modal-content">
+                <h2>Level Up!</h2>
+                <p>Choose a stat to increase:</p>
+                <div id="statUpgradeOptions" class="upgrade-options"></div>
+            </div>
+        </div>
+        
+        <div id="shopMenu" class="modal">
+            <div class="modal-content">
+                <h2>Survival Shop</h2>
+                <p>Coins: <span id="shopCoins">0</span></p>
+                
+                <div class="shop-tabs">
+                    <button class="tab-button active" data-tab="weapons">Weapons</button>
+                    <button class="tab-button" data-tab="upgrades">Upgrades</button>
+                    <button class="tab-button" data-tab="equipment">Equipment</button>
+                </div>
+                
+                <div class="shop-tab-content active" id="weapons-tab">
+                    <div id="weaponOptions" class="shop-options"></div>
+                </div>
+                
+                <div class="shop-tab-content" id="upgrades-tab">
+                    <div id="upgradeOptions" class="shop-options"></div>
+                </div>
+                
+                <div class="shop-tab-content" id="equipment-tab">
+                    <div id="equipmentOptions" class="shop-options"></div>
+                </div>
+                
+                <button id="closeShopButton">Back to Game</button>
+            </div>
+        </div>
+        
+        <div id="weaponUpgradeMenu" class="modal">
+            <div class="modal-content">
+                <h2>Weapon Upgrades</h2>
+                <p>Coins: <span id="weaponUpgradeCoins">0</span></p>
+                <div id="weaponUpgradeOptions" class="upgrade-options"></div>
+                <button id="closeWeaponUpgradeButton">Back to Game</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/weapons.js"></script>
+    <script src="js/zombies.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>

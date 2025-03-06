@@ -1,0 +1,28 @@
+/* Screen flash effects for damage, healing, etc. */
+.screen-flash {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+    animation: flash-fade 0.5s ease-out;
+}
+
+.damage-flash {
+    background-color: rgba(255, 0, 0, 0.3);
+}
+
+.heal-flash {
+    background-color: rgba(0, 255, 0, 0.2);
+}
+
+.level-flash {
+    background-color: rgba(255, 255, 0, 0.2);
+}
+
+@keyframes flash-fade {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
