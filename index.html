@@ -124,8 +124,19 @@
     <script src="js/game.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            loadGame();
+            // Khởi động game trực tiếp
+            if (typeof loadGame === 'function') {
+                loadGame();
+            } else {
+                console.error('loadGame function not found');
+                // Thử khởi động game trực tiếp
+                if (typeof initGame === 'function') {
+                    initGame();
+                } else {
+                    console.error('initGame function not found');
+                }
+            }
         });
-    </script>
+        </script>
 </body>
 </html>
