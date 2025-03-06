@@ -365,3 +365,21 @@ function checkCollisions() {
         }
     }
 }
+
+// Đảm bảo hàm restartGame được định nghĩa
+function restartGame() {
+    // Reset game state
+    zombies.length = 0;
+    bullets.length = 0;
+    effects.length = 0;
+    pickups.length = 0;
+    
+    // Khởi tạo lại player và các thành phần game
+    initGame();
+    
+    // Ẩn màn hình game over
+    document.getElementById('gameOver').style.display = 'none';
+    
+    // Kích hoạt game
+    gameRunning = true;
+}
