@@ -236,3 +236,132 @@ function loadGame() {
         loadingBar.style.width = `${progress}%`;
     }, 100);
 }
+
+// Handle keyboard events
+function handleKeyDown(e) {
+    switch(e.key.toLowerCase()) {
+        case 'w': keys.w = true; break;
+        case 'a': keys.a = true; break;
+        case 's': keys.s = true; break;
+        case 'd': keys.d = true; break;
+        case 'r': keys.r = true; break;
+        case ' ': keys.space = true; break;
+        case 'e': 
+            keys.e = true; 
+            if (gameRunning) openShop();
+            break;
+        case 'tab': 
+            keys.tab = true; 
+            e.preventDefault(); // Prevent tab from changing focus
+            if (gameRunning) openWeaponUpgradeMenu();
+            break;
+    }
+}
+
+function handleKeyUp(e) {
+    switch(e.key.toLowerCase()) {
+        case 'w': keys.w = false; break;
+        case 'a': keys.a = false; break;
+        case 's': keys.s = false; break;
+        case 'd': keys.d = false; break;
+        case 'r': keys.r = false; break;
+        case ' ': keys.space = false; break;
+        case 'e': keys.e = false; break;
+        case 'tab': keys.tab = false; break;
+    }
+}
+
+// Handle mouse events
+function handleMouseMove(e) {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+    
+    // Update player rotation to face mouse
+    const worldMouseX = mouseX + cameraX;
+    const worldMouseY = mouseY + cameraY;
+    player.rotation = Math.atan2(worldMouseY - player.y, worldMouseX - player.x);
+}
+
+function handleMouseDown(e) {
+    mouseDown = true;
+}
+
+function handleMouseUp(e) {
+    mouseDown = false;
+}
+
+function handleResize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+
+// Check collisions between all game entities
+function checkCollisions() {
+    // Check bullet-zombie collisions
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        const bullet = bullets[i];
+        
+        for (let j = zombies.length - 1; j >= 0; j--) {
+            const zombie = zombies[j];
+            
+            const dx = zombie.x - bullet.x;
+            const dy = zombie.y - bullet.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < zombie.radius + bullet.radius) {
+                // Zombie hit by bullet
+                
+                // Create hit effect
+                createEffect(
+                    bullet.x, 
+                    bullet.y, 
+                    10, // Radius
+                    0.2, // Duration
+                    'blood'
+                );
+                
+                // Apply damage
+                const killed = damageZombie(zombie, bullet.damage);
+                
+                // Show damage number
+                createEffect(
+                    bullet.x, 
+                    bullet.y, 
+                    15, // Radius
+                    0.7, // Duration
+                    'critText', 
+                    { text: bullet.damage.toFixed(0) }
+                );
+                
+                // Remove bullet
+                bullets.splice(i, 1);
+                
+                // No need to check this bullet against other zombies
+                break;
+            }
+        }
+    }
+    
+    // Check player-zombie collisions
+    for (let i = zombies.length - 1; i >= 0; i--) {
+        const zombie = zombies[i];
+        
+        const dx = player.x - zombie.x;
+        const dy = player.y - zombie.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < player.radius + zombie.radius) {
+            // Player hit by zombie
+            damagePlayer(zombie.damage);
+            
+            // Knockback player away from zombie
+            player.x += dx * 0.2;
+            player.y += dy * 0.2;
+            
+            // Also knockback zombie slightly
+            zombie.x -= dx * 0.1;
+            zombie.y -= dy * 0.1;
+        }
+    }
+}
