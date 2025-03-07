@@ -282,8 +282,9 @@ function updateZombies(deltaTime) {
                     speedMultiplier = 1.5; // Speed burst
                 }
                 
-                zombie.x += zombie.moveX * zombie.speed * speedMultiplier * deltaTime;
-                zombie.y += zombie.moveY * zombie.speed * speedMultiplier * deltaTime;
+                // ĐÃ SỬA: Loại bỏ deltaTime để tốc độ không bị ảnh hưởng
+                zombie.x += zombie.moveX * zombie.speed * speedMultiplier / 60;
+                zombie.y += zombie.moveY * zombie.speed * speedMultiplier / 60;
             }
         }
         
