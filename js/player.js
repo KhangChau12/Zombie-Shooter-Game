@@ -163,9 +163,11 @@ function movePlayer(deltaTime) {
         player.moving = false;
     }
     
-    // Apply movement
-    player.x += dx * player.speed * deltaTime;
-    player.y += dy * player.speed * deltaTime;
+    // Apply movement - sử dụng tốc độ cố định 5 thay vì deltaTime
+    // Lưu ý: phần này là điều chỉnh chính để sửa vấn đề tốc độ
+    const speed = player.speed;
+    player.x += dx * speed;
+    player.y += dy * speed;
 }
 
 // Try to shoot based on player weapon and state
