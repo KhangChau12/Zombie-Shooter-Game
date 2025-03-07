@@ -4,40 +4,52 @@
 function spawnZombiesInDiscoveredSections() {
     const currentTime = performance.now();
     
+    // Kiểm tra số lượng zombie hiện tại
+    if (zombies.length >= CONFIG.MAX_ZOMBIES_ON_SCREEN) {
+        return; // Không tạo thêm zombie nếu đã đạt giới hạn
+    }
+    
+    // Số lượng zombie còn có thể tạo thêm
+    const remainingSlots = CONFIG.MAX_ZOMBIES_ON_SCREEN - zombies.length;
+    if (remainingSlots <= 0) return;
+    
     mapSections.forEach(section => {
-        // Calculate distance from starting point
+        // Nếu không còn chỗ để tạo zombie, dừng lại
+        if (zombies.length >= CONFIG.MAX_ZOMBIES_ON_SCREEN) return;
+        
+        // Tính toán khoảng cách từ điểm bắt đầu
         const sectionCenterX = section.x + CONFIG.SECTION_SIZE / 2;
         const sectionCenterY = section.y + CONFIG.SECTION_SIZE / 2;
         const sectionX = Math.floor(section.x / CONFIG.SECTION_SIZE);
         const sectionY = Math.floor(section.y / CONFIG.SECTION_SIZE);
         
-        // Distance from start in section units
+        // Khoảng cách từ điểm bắt đầu theo đơn vị phần
         const distanceFromStart = Math.sqrt(
             Math.pow(sectionX - player.startSectionX, 2) + 
             Math.pow(sectionY - player.startSectionY, 2)
         );
         
-        // Spawn rate increases with distance from start
+        // Tốc độ sinh tăng với khoảng cách từ điểm bắt đầu
         const spawnRate = 0.03 * (1 + distanceFromStart * 0.03) * section.zombiesDensity;
         
-        // Spawn time decreases with distance (more frequent spawns)
+        // Thời gian sinh giảm với khoảng cách (sinh nhanh hơn)
         const spawnInterval = Math.max(1000, 5000 - distanceFromStart * 100);
         
-        // Only spawn zombies if enough time has passed and probability check passes
+        // Chỉ sinh zombie nếu đủ thời gian và kiểm tra xác suất pass
         if (currentTime - section.lastSpawnTime > spawnInterval && Math.random() < spawnRate) {
             section.lastSpawnTime = currentTime;
             
-            // Calculate distance from player to section center
+            // Tính khoảng cách từ người chơi đến trung tâm phần
             const distanceToPlayer = Math.sqrt(
                 Math.pow(sectionCenterX - player.x, 2) + 
                 Math.pow(sectionCenterY - player.y, 2)
             );
             
-            // Only spawn zombies if player is relatively close to the section
-            // Distance increases with difficulty to allow more zombies to come from farther away
+            // Chỉ sinh zombie nếu người chơi tương đối gần phần
+            // Khoảng cách tăng với độ khó để cho phép nhiều zombie đến từ xa hơn
             const spawnDistance = CONFIG.SPAWN_DISTANCE_MIN + section.difficulty * 100;
             if (distanceToPlayer < spawnDistance) {
-                // Find a valid spawn position that's off-screen but in the section
+                // Tìm vị trí sinh hợp lệ ngoài màn hình nhưng trong phần
                 let spawnX, spawnY;
                 let isValid = false;
                 let attempts = 0;
@@ -45,17 +57,17 @@ function spawnZombiesInDiscoveredSections() {
                 while (!isValid && attempts < 10) {
                     attempts++;
                     
-                    // Random position within section
+                    // Vị trí ngẫu nhiên trong phần
                     spawnX = section.x + Math.random() * CONFIG.SECTION_SIZE;
                     spawnY = section.y + Math.random() * CONFIG.SECTION_SIZE;
                     
-                    // Check if it's off screen (from player's view) but not too far
+                    // Kiểm tra xem nó có ngoài màn hình (từ góc nhìn người chơi) nhưng không quá xa
                     const distanceToPlayer = Math.sqrt(
                         Math.pow(spawnX - player.x, 2) + 
                         Math.pow(spawnY - player.y, 2)
                     );
                     
-                    // Make zombies spawn farther away in more difficult sections
+                    // Làm cho zombie sinh ra xa hơn ở các phần khó hơn
                     const minDistance = CONFIG.SPAWN_DISTANCE_MIN;
                     const maxDistance = CONFIG.SPAWN_DISTANCE_MAX + section.difficulty * 50;
                     
@@ -65,15 +77,22 @@ function spawnZombiesInDiscoveredSections() {
                 }
                 
                 if (isValid) {
-                    // Higher difficulty allows more zombies to spawn at once
-                    const zombieCount = Math.min(3, 1 + Math.floor(section.difficulty / 3));
-                    for (let i = 0; i < zombieCount; i++) {
-                        if (Math.random() < 0.7) { // 70% chance to spawn multiple
+                    // Số lượng zombie còn có thể sinh
+                    const zombiesToSpawn = Math.min(
+                        remainingSlots, 
+                        Math.min(3, 1 + Math.floor(section.difficulty / 3))
+                    );
+                    
+                    let spawnCount = 0;
+                    for (let i = 0; i < zombiesToSpawn; i++) {
+                        if (zombies.length < CONFIG.MAX_ZOMBIES_ON_SCREEN && 
+                            (i === 0 || Math.random() < 0.7)) { // 70% cơ hội sinh nhiều
                             spawnZombie(
                                 spawnX + (Math.random() - 0.5) * 50, 
                                 spawnY + (Math.random() - 0.5) * 50, 
                                 section.difficulty
                             );
+                            spawnCount++;
                         }
                     }
                 }
@@ -155,39 +174,48 @@ function spawnZombie(x, y, difficulty) {
 
 // Update all zombies
 function updateZombies(deltaTime) {
+    const currentTime = performance.now();
+    
     for (let i = zombies.length - 1; i >= 0; i--) {
         const zombie = zombies[i];
         
-        // Check if zombie is far offscreen, if so remove it to save resources
-        if (zombie.x < cameraX - 1000 || zombie.x > cameraX + canvas.width + 1000 ||
-            zombie.y < cameraY - 1000 || zombie.y > cameraY + canvas.height + 1000) {
+        // Kiểm tra nếu zombie xa quá ngoài màn hình, loại bỏ để tiết kiệm tài nguyên
+        if (zombie.x < cameraX - 1500 || zombie.x > cameraX + canvas.width + 1500 ||
+            zombie.y < cameraY - 1500 || zombie.y > cameraY + canvas.height + 1500) {
             zombies.splice(i, 1);
             continue;
         }
         
-        // Update zombie targeting
-        const currentTime = performance.now();
+        // Cập nhật mục tiêu zombie
         if (currentTime - zombie.pathUpdateTime > zombie.pathUpdateInterval) {
             zombie.pathUpdateTime = currentTime;
+            
+            // Luôn nhắm vào người chơi
             zombie.targetX = player.x;
             zombie.targetY = player.y;
+            
+            // Thêm một chút ngẫu nhiên để tạo chuyển động tự nhiên hơn
+            if (zombie.type !== 'boss') { // Boss luôn nhắm chính xác
+                zombie.targetX += (Math.random() - 0.5) * 50;
+                zombie.targetY += (Math.random() - 0.5) * 50;
+            }
         }
         
-        // Move zombie towards target with collision avoidance
+        // Di chuyển zombie về phía mục tiêu với tránh va chạm
         const dx = zombie.targetX - zombie.x;
         const dy = zombie.targetY - zombie.y;
         const distanceToTarget = Math.sqrt(dx * dx + dy * dy);
         
         if (distanceToTarget > 1) {
-            // Only calculate new direction periodically to save performance
+            // Chỉ tính toán hướng mới theo chu kỳ để tiết kiệm hiệu năng
             if (currentTime - zombie.lastMoveAttempt > 100) {
                 zombie.lastMoveAttempt = currentTime;
                 
-                // Base direction towards target
+                // Hướng cơ bản về phía mục tiêu
                 let moveX = dx / distanceToTarget;
                 let moveY = dy / distanceToTarget;
                 
-                // Check for collisions with other zombies and apply separation
+                // Kiểm tra va chạm với zombie khác và áp dụng tách biệt
                 for (let j = 0; j < zombies.length; j++) {
                     if (i !== j) {
                         const otherZombie = zombies[j];
@@ -195,34 +223,71 @@ function updateZombies(deltaTime) {
                         const separationDy = zombie.y - otherZombie.y;
                         const separationDistance = Math.sqrt(separationDx * separationDx + separationDy * separationDy);
                         
-                        // Apply separation force if zombies are too close
-                        if (separationDistance < zombie.radius + otherZombie.radius + 10) {
-                            // Stronger separation force for closer zombies
-                            const separationForce = 1 - (separationDistance / (zombie.radius + otherZombie.radius + 20));
+                        // Áp dụng lực tách biệt nếu zombie quá gần nhau
+                        const collisionThreshold = zombie.radius + otherZombie.radius + 5;
+                        if (separationDistance < collisionThreshold) {
+                            // Lực tách biệt mạnh hơn đối với zombie gần hơn
+                            const separationForce = 1 - (separationDistance / (collisionThreshold + 10));
                             moveX += (separationDx / separationDistance) * separationForce * 2;
                             moveY += (separationDy / separationDistance) * separationForce * 2;
                         }
                     }
                 }
                 
-                // Normalize the movement vector
+                // Chuẩn hóa vector chuyển động
                 const moveLength = Math.sqrt(moveX * moveX + moveY * moveY);
                 if (moveLength > 0) {
                     moveX /= moveLength;
                     moveY /= moveLength;
+                    
+                    // Thêm một chút chuyển động ngẫu nhiên cho zombie thường
+                    if (zombie.type === 'regular' && Math.random() < 0.3) {
+                        moveX += (Math.random() - 0.5) * 0.3;
+                        moveY += (Math.random() - 0.5) * 0.3;
+                        
+                        // Chuẩn hóa lại
+                        const newLength = Math.sqrt(moveX * moveX + moveY * moveY);
+                        moveX /= newLength;
+                        moveY /= newLength;
+                    }
+                    
+                    // Fast zombie đôi khi sẽ di chuyển theo zigzag
+                    if (zombie.type === 'fast' && Math.random() < 0.4) {
+                        const perpX = -moveY;
+                        const perpY = moveX;
+                        moveX += perpX * 0.5;
+                        moveY += perpY * 0.5;
+                        
+                        // Chuẩn hóa lại
+                        const newLength = Math.sqrt(moveX * moveX + moveY * moveY);
+                        moveX /= newLength;
+                        moveY /= newLength;
+                    }
                 }
                 
-                // Apply movement with delta time
-                zombie.x += moveX * zombie.speed * deltaTime;
-                zombie.y += moveY * zombie.speed * deltaTime;
+                // Lưu hướng chuyển động để sử dụng trong các frame cho đến lần cập nhật tiếp theo
+                zombie.moveX = moveX;
+                zombie.moveY = moveY;
+            }
+            
+            // Sử dụng hướng đã tính toán để di chuyển zombie
+            if (zombie.moveX !== undefined && zombie.moveY !== undefined) {
+                // Thêm đột biến tốc độ cho fast zombie để chúng di chuyển dứt khoát hơn
+                let speedMultiplier = 1;
+                if (zombie.type === 'fast' && Math.random() < 0.1) {
+                    speedMultiplier = 1.5; // Đột biến tốc độ
+                }
+                
+                zombie.x += zombie.moveX * zombie.speed * speedMultiplier * deltaTime;
+                zombie.y += zombie.moveY * zombie.speed * speedMultiplier * deltaTime;
             }
         }
         
-        // Update animation
+        // Cập nhật hoạt ảnh
         zombie.animationTime += deltaTime;
         if (zombie.animationTime >= zombie.animationSpeed) {
             zombie.animationTime = 0;
-            zombie.animationFrame = (zombie.animationFrame + 1) % 4; // 4 frames of animation
+            zombie.animationFrame = (zombie.animationFrame + 1) % 4; // 4 khung hình hoạt ảnh
         }
     }
 }

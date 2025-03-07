@@ -77,8 +77,9 @@ const CONFIG = {
     DIFFICULTY_DISTANCE_MULTIPLIER: 0.5,
     ZOMBIE_DENSITY_BASE: 0.5,
     ZOMBIE_DENSITY_MULTIPLIER: 0.05,
-    SPAWN_DISTANCE_MIN: 500,
-    SPAWN_DISTANCE_MAX: 800,
+    SPAWN_DISTANCE_MIN: 800,
+    SPAWN_DISTANCE_MAX: 1000,
+    MAX_ZOMBIES_ON_SCREEN: 30,
     
     // Pickups
     PICKUP_TYPES: {
@@ -111,7 +112,7 @@ const CONFIG = {
             cost: 500,
             property: 'damage',
             multiplier: 1.15,
-            maxLevel: 5
+            maxLevel: 20
         },
         {
             name: 'Fire Rate',
@@ -120,7 +121,7 @@ const CONFIG = {
             property: 'fireRate',
             multiplier: 1.1,
             inverseMultiplier: true, // Lower fireRate value = faster firing
-            maxLevel: 5
+            maxLevel: 20
         },
         {
             name: 'Accuracy',
@@ -128,7 +129,7 @@ const CONFIG = {
             cost: 400,
             property: 'spread',
             multiplier: 0.8,
-            maxLevel: 3
+            maxLevel: 12
         },
         {
             name: 'Reloading',
@@ -136,7 +137,7 @@ const CONFIG = {
             cost: 450,
             property: 'reloadTime',
             multiplier: 0.85,
-            maxLevel: 3
+            maxLevel: 12
         },
         {
             name: 'Ammo Capacity',
@@ -144,7 +145,7 @@ const CONFIG = {
             cost: 700,
             property: 'maxAmmo',
             multiplier: 1.25,
-            maxLevel: 3
+            maxLevel: 12
         }
     ],
     
