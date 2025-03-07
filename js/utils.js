@@ -193,6 +193,33 @@ function formatTime(seconds) {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
+// Get player's current survival time in formatted string
+function getPlayerSurvivalTime() {
+    const currentTime = performance.now();
+    const survivalTimeMs = currentTime - player.gameStartTime;
+    
+    // Convert to seconds
+    let seconds = Math.floor(survivalTimeMs / 1000);
+    
+    // Calculate minutes and hours
+    const hours = Math.floor(seconds / 3600);
+    seconds %= 3600;
+    const minutes = Math.floor(seconds / 60);
+    seconds %= 60;
+    
+    // Format the string
+    let timeString = '';
+    if (hours > 0) {
+        timeString += `${hours}h `;
+    }
+    if (minutes > 0 || hours > 0) {
+        timeString += `${minutes}m `;
+    }
+    timeString += `${seconds}s`;
+    
+    return timeString;
+}
+
 // Get a color based on difficulty level (green to red gradient)
 function getDifficultyColor(difficulty, alpha = 1) {
     // Red increases, green decreases with difficulty
