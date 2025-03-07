@@ -164,8 +164,8 @@ function movePlayer(deltaTime) {
     }
     
     // Apply movement
-    player.x += dx * player.speed;
-    player.y += dy * player.speed;
+    player.x += dx * player.speed * deltaTime;
+    player.y += dy * player.speed * deltaTime;
 }
 
 // Try to shoot based on player weapon and state
