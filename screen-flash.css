@@ -15,7 +15,7 @@
 }
 
 .heal-flash {
-    background-color: rgba(0, 255, 0, 0.2);
+    background-color: rgba(0, 255, 0, 0.05);
 }
 
 .level-flash {
@@ -23,12 +23,12 @@
 }
 
 .territory-flash {
-    background-color: rgba(0, 255, 100, 0.2);
+    background-color: rgba(0, 255, 100, 0.05); /* Giảm độ đậm */
     animation: territory-flash-fade 1s ease-out;
 }
 
 .home-flash {
-    background-color: rgba(255, 215, 0, 0.2);
+    background-color: rgba(255, 215, 0, 0.05); /* Giảm độ đậm */
     animation: territory-flash-fade 1s ease-out;
 }
 
@@ -39,6 +39,6 @@
 
 @keyframes territory-flash-fade {
     0% { opacity: 0; }
-    50% { opacity: 1; }
+    50% { opacity: 0.5; } /* Giảm độ đậm */
     100% { opacity: 0; }
 }

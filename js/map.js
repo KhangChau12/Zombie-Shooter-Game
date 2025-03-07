@@ -286,6 +286,113 @@ function drawBackground() {
             ctx.lineWidth = section.isTerritory ? 3 : 2;
             ctx.strokeRect(screenX, screenY, CONFIG.SECTION_SIZE, CONFIG.SECTION_SIZE);
             
+            if (!section.isTerritory && section.isCleared) {
+                const halfSize = CONFIG.SECTION_SIZE / 2;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]); // Đường kẻ đứt
+                
+                // Đường ngang chia đôi section
+                ctx.beginPath();
+                ctx.moveTo(screenX, screenY + halfSize);
+                ctx.lineTo(screenX + CONFIG.SECTION_SIZE, screenY + halfSize);
+                ctx.stroke();
+                
+                // Đường dọc chia đôi section
+                ctx.beginPath();
+                ctx.moveTo(screenX + halfSize, screenY);
+                ctx.lineTo(screenX + halfSize, screenY + CONFIG.SECTION_SIZE);
+                ctx.stroke();
+                
+                ctx.setLineDash([]); // Khôi phục đường nét liền
+                
+                // Hiển thị tiến độ chiếm lãnh thổ
+                if (section.torches && section.torches.length > 0) {
+                    const torchCount = section.torches.length;
+                    const torchProgress = torchCount / 4; // 4 đuốc để chiếm hoàn toàn
+                    
+                    // Vẽ thanh tiến độ
+                    const progressBarWidth = 60;
+                    const progressBarHeight = 8;
+                    const progressX = screenX + CONFIG.SECTION_SIZE/2 - progressBarWidth/2;
+                    const progressY = screenY + CONFIG.SECTION_SIZE/2 + 30;
+                    
+                    // Background
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    ctx.fillRect(progressX, progressY, progressBarWidth, progressBarHeight);
+                    
+                    // Progress fill
+                    ctx.fillStyle = 'rgba(0, 255, 100, 0.7)';
+                    ctx.fillRect(progressX, progressY, progressBarWidth * torchProgress, progressBarHeight);
+                    
+                    // Border
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(progressX, progressY, progressBarWidth, progressBarHeight);
+                    
+                    // Text
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '10px Orbitron';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(
+                        `${torchCount}/4 torches`,
+                        screenX + CONFIG.SECTION_SIZE/2,
+                        progressY + progressBarHeight + 12
+                    );
+                }
+            }
+
+                // Đánh dấu các phần tư đã có đuốc
+                if (section.torches && section.torches.length > 0) {
+                    const halfSize = CONFIG.SECTION_SIZE / 2;
+                    
+                    // Xác định phần tư nào đã có đuốc
+                    const quadrantStatus = {
+                        "top-left": false,
+                        "top-right": false,
+                        "bottom-left": false,
+                        "bottom-right": false
+                    };
+                    
+                    // Kiểm tra từng đuốc và cập nhật trạng thái
+                    for (const torch of section.torches) {
+                        const torchRelativeX = torch.x - section.x;
+                        const torchRelativeY = torch.y - section.y;
+                        
+                        if (torchRelativeX < halfSize && torchRelativeY < halfSize) {
+                            quadrantStatus["top-left"] = true;
+                        } else if (torchRelativeX >= halfSize && torchRelativeY < halfSize) {
+                            quadrantStatus["top-right"] = true;
+                        } else if (torchRelativeX < halfSize && torchRelativeY >= halfSize) {
+                            quadrantStatus["bottom-left"] = true;
+                        } else {
+                            quadrantStatus["bottom-right"] = true;
+                        }
+                    }
+                    
+                    // Tô màu cho các phần tư đã có đuốc
+                    ctx.globalAlpha = 0.2;
+                    ctx.fillStyle = 'rgba(255, 165, 0, 0.3)'; // Orange for torch quadrants
+                    
+                    if (quadrantStatus["top-left"]) {
+                        ctx.fillRect(screenX, screenY, halfSize, halfSize);
+                    }
+                    
+                    if (quadrantStatus["top-right"]) {
+                        ctx.fillRect(screenX + halfSize, screenY, halfSize, halfSize);
+                    }
+                    
+                    if (quadrantStatus["bottom-left"]) {
+                        ctx.fillRect(screenX, screenY + halfSize, halfSize, halfSize);
+                    }
+                    
+                    if (quadrantStatus["bottom-right"]) {
+                        ctx.fillRect(screenX + halfSize, screenY + halfSize, halfSize, halfSize);
+                    }
+                    
+                    ctx.globalAlpha = 1.0;
+                }
+                
             // Draw difficulty number in center of section
             ctx.fillStyle = section.isTerritory ? 
                 'rgba(0, 255, 100, 0.7)' : // Green for territory
@@ -654,13 +761,19 @@ function markZombieKilled(zombie) {
         }
         
         // Create a floating text showing the section progress
-        createFloatingText(
-            zombie.x,
-            zombie.y - 20,
-            `Section: ${section.clearProgress.toFixed(0)}%`,
-            '#FFFFFF',
-            1.5
-        );
+        if (typeof showLootNotification === 'function') {
+            // Use the new notification system if available
+            showLootNotification('progress', `Section: ${section.clearProgress.toFixed(0)}%`);
+        } else {
+            // Fallback to floating text
+            createFloatingText(
+                zombie.x,
+                zombie.y - 20,
+                `Section: ${section.clearProgress.toFixed(0)}%`,
+                '#FFFFFF',
+                1.5
+            );
+        }
     }
 }
 
@@ -722,13 +835,19 @@ function createSectionClearEffect(section) {
         const x = centerX + Math.cos(angle) * 100;
         const y = centerY + Math.sin(angle) * 100;
         
-        createFloatingText(
-            x,
-            y,
-            '+XP',
-            '#00FF00',
-            1.5
-        );
+        if (typeof showLootNotification === 'function') {
+            // Use the new notification system if available
+            showLootNotification('xp', '+XP');
+        } else {
+            // Fallback to floating text
+            createFloatingText(
+                x,
+                y,
+                '+XP',
+                '#00FF00',
+                1.5
+            );
+        }
     }
 }
 
@@ -787,6 +906,20 @@ function openTreasureChest(section) {
             );
             player.coins += amount;
             rewards.push(`${amount} coins`);
+            
+            // Create notification
+            if (typeof showLootNotification === 'function') {
+                showLootNotification('coins', `+${amount} coins`);
+            } else {
+                // Fallback to old floating text method
+                createFloatingText(
+                    section.x + CONFIG.SECTION_SIZE / 2,
+                    section.y + CONFIG.SECTION_SIZE / 2,
+                    `+${amount} coins`,
+                    '#FFD700',
+                    2
+                );
+            }
         } else if (lootItem.type === 'ammo') {
             // Random ammo for a weapon the player has
             const unlockedWeapons = WEAPONS.filter(w => w.unlocked);
@@ -801,6 +934,20 @@ function openTreasureChest(section) {
                 
                 addAmmunition(ammoType, amount);
                 rewards.push(`${amount} ${ammoConfig.name}`);
+                
+                // Create notification
+                if (typeof showLootNotification === 'function') {
+                    showLootNotification('ammo', `+${amount} ${ammoConfig.name}`);
+                } else {
+                    // Fallback to old floating text method
+                    createFloatingText(
+                        section.x + CONFIG.SECTION_SIZE / 2 - 30,
+                        section.y + CONFIG.SECTION_SIZE / 2 - 20,
+                        `+${amount} ${ammoConfig.name}`,
+                        ammoConfig.color,
+                        2
+                    );
+                }
             }
         } else if (lootItem.type === 'health') {
             // Health bonus
@@ -809,6 +956,20 @@ function openTreasureChest(section) {
             );
             player.health = Math.min(player.health + amount, player.maxHealth);
             rewards.push(`${amount} health`);
+            
+            // Create notification
+            if (typeof showLootNotification === 'function') {
+                showLootNotification('health', `+${amount} health`);
+            } else {
+                // Fallback to old floating text method
+                createFloatingText(
+                    section.x + CONFIG.SECTION_SIZE / 2 + 30,
+                    section.y + CONFIG.SECTION_SIZE / 2 - 10,
+                    `+${amount} health`,
+                    '#FF0000',
+                    2
+                );
+            }
         } else if (lootItem.type === 'attachment') {
             // Weapon attachment
             if (Math.random() < lootItem.chance) {
@@ -840,6 +1001,21 @@ function openTreasureChest(section) {
                                 const attachment = compatibleAttachments[Math.floor(Math.random() * compatibleAttachments.length)];
                                 addAttachmentToWeapon(weapon.id, attachment.id);
                                 rewards.push(`${attachment.name} for ${weapon.name}`);
+                                
+                                // Create notification
+                                if (typeof showLootNotification === 'function') {
+                                    showLootNotification('attachment', `${attachment.name} for ${weapon.name}!`);
+                                } else {
+                                    // Fallback to old floating text method
+                                    createFloatingText(
+                                        section.x + CONFIG.SECTION_SIZE / 2,
+                                        section.y + CONFIG.SECTION_SIZE / 2 - 30,
+                                        `${attachment.name} for ${weapon.name}!`,
+                                        '#FFFFFF',
+                                        3
+                                    );
+                                }
+                                
                                 compatibleFound = true;
                             }
                         }
@@ -848,21 +1024,107 @@ function openTreasureChest(section) {
                             // Fallback to coins if no compatible attachment found
                             const amount = 200 + Math.floor(Math.random() * 300);
                             player.coins += amount;
-                            rewards.push(`${amount} coins`);
+                            rewards.push(`${amount} coins (fallback)`);
+                            
+                            // Create notification
+                            if (typeof showLootNotification === 'function') {
+                                showLootNotification('coins', `+${amount} coins`);
+                            } else {
+                                // Fallback to old floating text method
+                                createFloatingText(
+                                    section.x + CONFIG.SECTION_SIZE / 2,
+                                    section.y + CONFIG.SECTION_SIZE / 2,
+                                    `+${amount} coins`,
+                                    '#FFD700',
+                                    2
+                                );
+                            }
                         }
                     } else {
                         // Fallback to coins if no weapons with free slots
                         const amount = 200 + Math.floor(Math.random() * 300);
                         player.coins += amount;
-                        rewards.push(`${amount} coins`);
+                        rewards.push(`${amount} coins (fallback)`);
+                        
+                        // Create notification
+                        if (typeof showLootNotification === 'function') {
+                            showLootNotification('coins', `+${amount} coins`);
+                        } else {
+                            // Fallback to old floating text method
+                            createFloatingText(
+                                section.x + CONFIG.SECTION_SIZE / 2,
+                                section.y + CONFIG.SECTION_SIZE / 2,
+                                `+${amount} coins`,
+                                '#FFD700',
+                                2
+                            );
+                        }
                     }
                 }
             }
         } else if (lootItem.type === 'torch') {
-            // Torches for territory claiming
-            addTorches(lootItem.value);
-            rewards.push(`${lootItem.value} torch${lootItem.value > 1 ? 'es' : ''}`);
+            // Luôn rơi đuốc nhưng số lượng khác nhau dựa vào tỉ lệ
+            const rand = Math.random();
+            let torchValue = 0;
+            
+            if (rand < 0.05) { // 5% nhận 4 đuốc
+                torchValue = 4;
+            } else if (rand < 0.30) { // 25% nhận 3 đuốc
+                torchValue = 3;
+            } else if (rand < 0.80) { // 50% nhận 2 đuốc
+                torchValue = 2;
+            } else { // 20% nhận 1 đuốc
+                torchValue = 1;
+            }
+            
+            // Thêm đuốc vào inventory
+            addTorches(torchValue);
+            rewards.push(`${torchValue} torch${torchValue > 1 ? 'es' : ''}`);
+            
+            // Create torch effect with a slight delay for dramatic effect
+            setTimeout(() => {
+                // Create a large torch visual that stays visible for a moment
+                createEffect(
+                    section.x + CONFIG.SECTION_SIZE / 2,
+                    section.y + CONFIG.SECTION_SIZE / 2 - 50,
+                    30, // Larger radius
+                    3, // Longer duration
+                    'torch'
+                );
+                
+                // Create notification
+                if (typeof showLootNotification === 'function') {
+                    showLootNotification('torch', `+${torchValue} Torch${torchValue > 1 ? 'es' : ''}!`);
+                } else {
+                    // Fallback to old floating text method
+                    createFloatingText(
+                        section.x + CONFIG.SECTION_SIZE / 2,
+                        section.y + CONFIG.SECTION_SIZE / 2 - 80,
+                        `+${torchValue} Torch${torchValue > 1 ? 'es' : ''}!`,
+                        '#FFA500',
+                        3
+                    );
+                }
+            }, 500); // Delay for visual effect
         }
+    }
+    
+    // Add XP reward based on section difficulty
+    const xpReward = 50 * section.difficulty;
+    addXP(xpReward);
+    
+    // Create XP notification
+    if (typeof showLootNotification === 'function') {
+        showLootNotification('xp', `+${xpReward} XP`);
+    } else {
+        // Fallback to old floating text method
+        createFloatingText(
+            section.x + CONFIG.SECTION_SIZE / 2,
+            section.y + CONFIG.SECTION_SIZE / 2 - 50,
+            `+${xpReward} XP`,
+            '#00FF00',
+            2
+        );
     }
     
     // Show rewards message
@@ -882,26 +1144,113 @@ function createTreasureOpenEffect(x, y) {
         x,
         y,
         50, // radius
-        1, // duration
+        1.5, // duration
         'treasureOpen'
     );
     
     // Create particle effects (flying coins/items)
-    for (let i = 0; i < 12; i++) {
-        const angle = (i / 12) * Math.PI * 2;
-        const speed = 20 + Math.random() * 20;
+    for (let i = 0; i < 16; i++) {
+        const angle = (i / 16) * Math.PI * 2;
+        const speed = 20 + Math.random() * 50;
+        
+        // Choose random colors for different types of rewards
+        const colors = ['#FFD700', '#FF0000', '#4169E1', '#32CD32', '#FFA500'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
         
         createEffect(
             x,
             y,
-            5, // radius
-            1, // duration
+            5 + Math.random() * 3, // radius
+            1.5, // duration
             'treasureParticle',
             {
                 dx: Math.cos(angle) * speed,
                 dy: Math.sin(angle) * speed,
-                color: '#FFD700' // Gold
+                color: color
             }
         );
     }
+    
+    // Create a larger golden glow
+    createEffect(
+        x,
+        y,
+        80, // radius
+        1, // duration
+        'treasureGlow',
+        {
+            color: 'rgba(255, 215, 0, 0.3)' // Gold with transparency
+        }
+    );
+}
+
+// Replace the drawTreasureChest function with this enhanced version
+function drawTreasureChest(x, y) {
+    // Animation values
+    const time = performance.now();
+    const bounce = Math.sin(time / 500) * 3;
+    const glow = 0.3 + Math.sin(time / 300) * 0.2;
+    
+    // Glowing effect to attract attention
+    ctx.fillStyle = `rgba(255, 215, 0, ${glow})`;
+    ctx.beginPath();
+    ctx.arc(x, y + bounce, 30, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Base of chest
+    ctx.fillStyle = '#8B4513'; // Brown
+    ctx.fillRect(x - 15, y - 10 + bounce, 30, 20);
+    
+    // Top of chest
+    ctx.fillStyle = '#A0522D'; // Lighter brown
+    ctx.beginPath();
+    ctx.moveTo(x - 15, y - 10 + bounce);
+    ctx.lineTo(x + 15, y - 10 + bounce);
+    ctx.lineTo(x + 15, y - 15 + bounce);
+    ctx.lineTo(x - 15, y - 15 + bounce);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Gold trim
+    ctx.fillStyle = '#FFD700'; // Gold
+    ctx.fillRect(x - 16, y - 10 + bounce, 32, 3);
+    ctx.fillRect(x - 16, y + 8 + bounce, 32, 3);
+    
+    // Keyhole
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(x, y + bounce, 3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw small stars around chest occasionally
+    if (Math.floor(time / 300) % 5 === 0) {
+        const angle = (time / 500) % (Math.PI * 2);
+        const starX = x + Math.cos(angle) * 25;
+        const starY = y + Math.sin(angle) * 25 + bounce;
+        
+        ctx.fillStyle = '#FFFF00';
+        drawStar(starX, starY, 5, 2, 5);
+    }
+}
+
+// Add this helper function for drawing stars
+function drawStar(x, y, outerRadius, innerRadius, spikes) {
+    let rotation = Math.PI / 2;
+    let step = Math.PI / spikes;
+    
+    ctx.beginPath();
+    for (let i = 0; i < spikes * 2; i++) {
+        const radius = i % 2 === 0 ? outerRadius : innerRadius;
+        const angle = rotation + i * step;
+        const pointX = x + Math.cos(angle) * radius;
+        const pointY = y + Math.sin(angle) * radius;
+        
+        if (i === 0) {
+            ctx.moveTo(pointX, pointY);
+        } else {
+            ctx.lineTo(pointX, pointY);
+        }
+    }
+    ctx.closePath();
+    ctx.fill();
 }

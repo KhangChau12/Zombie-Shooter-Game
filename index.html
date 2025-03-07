@@ -150,6 +150,10 @@
     <script src="js/game.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Mở rộng UI với các tính năng bổ sung
+            if (typeof extendUI === 'function') {
+                extendUI();
+            }
             // Start the game directly
             if (typeof loadGame === 'function') {
                 loadGame();

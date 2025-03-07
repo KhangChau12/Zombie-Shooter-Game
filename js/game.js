@@ -432,7 +432,7 @@ function drawPlayer() {
 
 // Draw weapon selector UI
 function drawWeaponSelector() {
-    if (player.equippedWeapons.length <= 1) return;
+    if (!player.equippedWeapons || player.equippedWeapons.length < 1) return;
     
     const topMargin = 20;
     const weaponBoxSize = 60;
@@ -479,6 +479,53 @@ function drawWeaponSelector() {
 
 // Draw torch indicator
 function drawTorchIndicator() {
+    const padding = 20;
+    const iconSize = 30;
+    const textOffset = 5;
+    
+    // Position in the top-right corner
+    const x = canvas.width - padding - iconSize;
+    const y = padding + iconSize;
+    
+    // Draw torch icon
+    ctx.fillStyle = '#A0522D'; // Brown torch handle
+    ctx.fillRect(x - 2, y - iconSize/2, 4, iconSize/2);
+    
+    // Draw torch head
+    ctx.fillStyle = '#FFA500'; // Orange flame
+    ctx.beginPath();
+    ctx.arc(x, y - iconSize/2, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Animate flame
+    const time = performance.now() / 200;
+    const flameHeight = 10 + Math.sin(time) * 3;
+    
+    // Create flame gradient
+    const gradient = ctx.createRadialGradient(
+        x, y - iconSize/2 - 5, 2,
+        x, y - iconSize/2 - 5, flameHeight
+    );
+    gradient.addColorStop(0, 'rgba(255, 255, 0, 0.9)');
+    gradient.addColorStop(0.4, 'rgba(255, 165, 0, 0.7)');
+    gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y - iconSize/2 - 5, flameHeight, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw count text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '18px Orbitron';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${player.torchCount}`, x - iconSize/2 - textOffset, y);
+    
+    // Draw F key indicator
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = '12px Orbitron';
+    ctx.fillText('[F]', x - iconSize/2 - textOffset, y + 15);
+}function drawTorchIndicator() {
     const padding = 20;
     const iconSize = 30;
     const textOffset = 5;
@@ -597,35 +644,59 @@ function drawSectionClearingProgress() {
     const barX = (canvas.width - barWidth) / 2;
     const barY = 20;
     
-    // Draw background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.fillRect(barX, barY, barWidth, barHeight);
-    
-    // Draw progress
-    ctx.fillStyle = currentSection.isCleared ? 'rgba(0, 255, 100, 0.7)' : 'rgba(255, 100, 0, 0.7)';
-    ctx.fillRect(barX, barY, barWidth * (progress / 100), barHeight);
-    
-    // Draw border
-    ctx.strokeStyle = '#FFFFFF';
+    // Draw background container
+    ctx.fillStyle = 'rgba(10, 20, 35, 0.75)';
+    ctx.strokeStyle = 'rgba(80, 130, 170, 0.6)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(barX, barY, barWidth, barHeight);
+    ctx.beginPath();
+    ctx.roundRect(barX - 10, barY - 10, barWidth + 20, barHeight + 40, 8);
+    ctx.fill();
+    ctx.stroke();
     
-    // Draw text
+    // Draw title text
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = '12px Orbitron';
+    ctx.font = '14px Orbitron';
     ctx.textAlign = 'center';
     ctx.fillText(
         `SECTION CLEARING: ${Math.floor(progress)}%`, 
         barX + barWidth / 2, 
-        barY + barHeight / 2 + 4
+        barY + 5
     );
     
+    // Draw background
+    ctx.fillStyle = 'rgba(50, 50, 70, 0.5)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(barX, barY + 15, barWidth, barHeight, 5);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Draw progress with gradient
+    const gradient = ctx.createLinearGradient(barX, 0, barX + barWidth, 0);
+    gradient.addColorStop(0, 'rgba(255, 118, 118, 0.9)');
+    gradient.addColorStop(1, 'rgba(255, 75, 75, 0.9)');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.roundRect(barX, barY + 15, barWidth * (progress / 100), barHeight, 5);
+    ctx.fill();
+    
+    // Add glow effect
+    ctx.shadowColor = 'rgba(255, 0, 0, 0.5)';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.roundRect(barX, barY + 15, barWidth * (progress / 100), barHeight, 5);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
     // Draw zombies remaining
-    ctx.font = '10px Orbitron';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.font = '12px Orbitron';
     ctx.textAlign = 'center';
     ctx.fillText(
         `${currentSection.zombiesRemaining}/${currentSection.zombiesTotal} zombies remaining`, 
         barX + barWidth / 2, 
-        barY + barHeight + 15
+        barY + barHeight + 30
     );
 }

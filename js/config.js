@@ -33,7 +33,7 @@ const CONFIG = {
         HOME_BONUS_MULTIPLIER: 1.5, // Bonus multiplier for effects near home
         TORCH_INITIAL: 3,        // Starting number of torches
         TORCH_RADIUS: 15,        // Visual radius of torch
-        TORCH_LIGHT_RADIUS: 80,  // Light radius of torch
+        TORCH_LIGHT_RADIUS: 375,  // Light radius of torch
         TORCH_COST: 150,         // Cost to buy a new torch
     },
     
@@ -198,7 +198,7 @@ const CONFIG = {
     ZOMBIE_TYPES: {
         regular: {
             radius: 20,
-            speedMultiplier: 1,
+            speedMultiplier: 5,
             healthMultiplier: 1,
             damageMultiplier: 1,
             color: '#00FFFF', // Cyan
@@ -207,7 +207,7 @@ const CONFIG = {
         },
         fast: {
             radius: 15,
-            speedMultiplier: 1.5, 
+            speedMultiplier: 7.5, 
             healthMultiplier: 0.7,
             damageMultiplier: 0.8,
             color: '#00FF00', // Green
@@ -216,7 +216,7 @@ const CONFIG = {
         },
         tank: {
             radius: 30,
-            speedMultiplier: 0.7,
+            speedMultiplier: 3.5,
             healthMultiplier: 2.5,
             damageMultiplier: 1.5,
             color: '#800080', // Purple
@@ -225,7 +225,7 @@ const CONFIG = {
         },
         boss: {
             radius: 40,
-            speedMultiplier: 0.6,
+            speedMultiplier: 3,
             healthMultiplier: 6,
             damageMultiplier: 2,
             color: '#FF0000', // Red
@@ -237,7 +237,7 @@ const CONFIG = {
     // Zombie spawning
     ZOMBIE_BASE_STATS: {
         health: 50,
-        speed: 2,
+        speed: 5,
         damage: 10
     },
     

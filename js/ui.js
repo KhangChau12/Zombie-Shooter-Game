@@ -58,6 +58,11 @@ function updateUI() {
     document.getElementById('finalKills').textContent = formatNumber(player.kills);
     document.getElementById('finalLevel').textContent = player.level;
     document.getElementById('survivalTime').textContent = getPlayerSurvivalTime();
+
+    // Cập nhật thanh vũ khí mới
+    if (typeof updateBottomBar === 'function') {
+        updateBottomBar();
+    }
 }
 
 // Open the shop menu
@@ -672,4 +677,652 @@ function addTerritoryStatsToUI() {
         clearedRow.innerHTML = 'Cleared: <span id="sectionsCleared">0</span>';
         statsSection.appendChild(clearedRow);
     }
+}
+
+// Bổ sung vào file ui.js
+
+// Vẽ chỉ báo lãnh thổ khi người chơi đang trong lãnh thổ
+function drawTerritoryIndicator() {
+    // Nếu không có canvas hoặc người chơi không trong lãnh thổ, không cần vẽ
+    if (!canvas || (!player.inTerritory && !player.inHomeRadius)) return;
+    
+    // Vị trí hiển thị chỉ báo
+    const padding = 20;
+    const iconSize = 30;
+    
+    // Đặt ở bên dưới chỉ báo đuốc trong góc trên bên phải
+    const x = canvas.width - padding - iconSize;
+    const y = padding + iconSize * 3;
+    
+    // Hiệu ứng nhấp nháy theo thời gian
+    const pulseIntensity = Math.sin(performance.now() / 500) * 0.2 + 0.8;
+    
+    // Màu dựa vào loại lãnh thổ (home zone hoặc claimed territory)
+    let color;
+    let label;
+    let effectText;
+    let effectStrength;
+    
+    if (player.inHomeRadius) {
+        color = `rgba(255, 215, 0, ${pulseIntensity})`; // Màu vàng gold cho home
+        label = 'HOME ZONE';
+        effectStrength = CONFIG.TERRITORY.HOME_BONUS_MULTIPLIER;
+    } else {
+        color = `rgba(0, 255, 100, ${pulseIntensity})`; // Màu xanh lá cho territory
+        label = 'TERRITORY';
+        effectStrength = 1;
+    }
+    
+    // Vẽ biểu tượng khiên
+    ctx.beginPath();
+    ctx.moveTo(x, y - iconSize/2);
+    ctx.lineTo(x - iconSize/2, y - iconSize/4);
+    ctx.lineTo(x - iconSize/2, y + iconSize/4);
+    ctx.lineTo(x, y + iconSize/2 + 5);
+    ctx.lineTo(x + iconSize/2, y + iconSize/4);
+    ctx.lineTo(x + iconSize/2, y - iconSize/4);
+    ctx.closePath();
+    
+    // Tô màu biểu tượng
+    ctx.fillStyle = color;
+    ctx.fill();
+    
+    // Viền biểu tượng
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Vẽ văn bản
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '12px Orbitron';
+    ctx.textAlign = 'right';
+    ctx.fillText(label, x - iconSize/2 - 5, y);
+    
+    // Vẽ hiệu ứng
+    ctx.font = '10px Orbitron';
+    ctx.fillText(`+${Math.round(CONFIG.TERRITORY.HEALTH_REGEN * effectStrength)}/s HEALTH`, x - iconSize/2 - 5, y + 15);
+    ctx.fillText(`+${Math.round((CONFIG.TERRITORY.DAMAGE_BOOST - 1) * 100 * effectStrength)}% DMG`, x - iconSize/2 - 5, y + 30);
+    ctx.fillText(`+${Math.round((CONFIG.TERRITORY.SPEED_BOOST - 1) * 100 * effectStrength)}% SPEED`, x - iconSize/2 - 5, y + 45);
+}
+
+// Hiển thị và xử lý menu cài đặt
+function showSettingsMenu() {
+    // Kiểm tra nếu menu cài đặt đã tồn tại
+    let settingsMenu = document.getElementById('settingsMenu');
+    
+    // Nếu chưa có, tạo mới
+    if (!settingsMenu) {
+        settingsMenu = document.createElement('div');
+        settingsMenu.id = 'settingsMenu';
+        settingsMenu.className = 'modal';
+        
+        // Tạo nội dung menu
+        settingsMenu.innerHTML = `
+            <div class="modal-content">
+                <h2>Game Settings</h2>
+                
+                <div class="settings-section">
+                    <h3>Sound Settings</h3>
+                    <div class="setting-row">
+                        <label for="soundToggle">Sound Effects:</label>
+                        <label class="switch">
+                            <input type="checkbox" id="soundToggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <label for="soundVolume">Sound Volume:</label>
+                        <input type="range" id="soundVolume" min="0" max="100" value="70">
+                    </div>
+                    
+                    <div class="setting-row">
+                        <label for="musicToggle">Music:</label>
+                        <label class="switch">
+                            <input type="checkbox" id="musicToggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <label for="musicVolume">Music Volume:</label>
+                        <input type="range" id="musicVolume" min="0" max="100" value="50">
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Display Settings</h3>
+                    <div class="setting-row">
+                        <label for="showFPS">Show FPS:</label>
+                        <label class="switch">
+                            <input type="checkbox" id="showFPS">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Controls</h3>
+                    <p>Movement: WASD</p>
+                    <p>Shoot: Left Mouse</p>
+                    <p>Reload: R</p>
+                    <p>Place Torch: F</p>
+                    <p>Shop: E</p>
+                    <p>Weapon Upgrade: TAB</p>
+                    <p>Switch Weapons: Q, Mouse Wheel, or 1-3</p>
+                </div>
+                
+                <div class="button-group">
+                    <button id="closeSettingsButton">Back to Game</button>
+                </div>
+            </div>
+        `;
+        
+        // Thêm vào DOM
+        document.getElementById('gameContainer').appendChild(settingsMenu);
+        
+        // Thêm event listeners
+        document.getElementById('closeSettingsButton').addEventListener('click', closeSettingsMenu);
+        document.getElementById('soundToggle').addEventListener('change', function() {
+            toggleSound();
+        });
+        document.getElementById('musicToggle').addEventListener('change', function() {
+            toggleMusic();
+        });
+        document.getElementById('soundVolume').addEventListener('input', function() {
+            setSoundVolume(this.value / 100);
+        });
+        document.getElementById('musicVolume').addEventListener('input', function() {
+            setMusicVolume(this.value / 100);
+        });
+        document.getElementById('showFPS').addEventListener('change', function() {
+            // Hàm chuyển đổi hiển thị FPS, có thể triển khai sau
+        });
+    }
+    
+    // Hiển thị menu
+    settingsMenu.style.display = 'flex';
+    
+    // Tạm dừng game
+    gameRunning = false;
+}
+
+// Đóng menu cài đặt
+function closeSettingsMenu() {
+    const settingsMenu = document.getElementById('settingsMenu');
+    if (settingsMenu) {
+        settingsMenu.style.display = 'none';
+    }
+    
+    // Tiếp tục game
+    gameRunning = true;
+}
+
+// Thêm các nút cài đặt vào UI
+function addSettingsButton() {
+    // Kiểm tra nếu nút đã tồn tại
+    if (document.getElementById('settingsButton')) return;
+    
+    // Tạo nút cài đặt
+    const settingsButton = document.createElement('button');
+    settingsButton.id = 'settingsButton';
+    settingsButton.className = 'action-button';
+    settingsButton.textContent = 'Settings';
+    
+    // Thêm vào UI
+    const actionButtons = document.querySelector('.action-buttons');
+    if (actionButtons) {
+        actionButtons.appendChild(settingsButton);
+        
+        // Thêm event listener
+        settingsButton.addEventListener('click', showSettingsMenu);
+    }
+}
+
+// Cập nhật thêm các hàm UI cho thêm vào initUI()
+function extendUI() {
+    // Thêm nút cài đặt
+    addSettingsButton();
+    
+    // Thêm CSS cho menu cài đặt nếu chưa có
+    addSettingsStyles();
+}
+
+// Tạo thanh vũ khí mới + hiển thị đuốc
+function createBottomBar() {
+    // Xóa thanh vũ khí cũ nếu có
+    const oldSelector = document.getElementById('weaponSelector');
+    if (oldSelector) oldSelector.remove();
+    
+    // Tạo container chính
+    const bottomBar = document.createElement('div');
+    bottomBar.id = 'bottomBar';
+    bottomBar.className = 'bottom-bar';
+    
+    // Tạo thanh vũ khí
+    const weaponBar = document.createElement('div');
+    weaponBar.id = 'weaponBar';
+    weaponBar.className = 'weapon-bar';
+    
+    // Tạo 5 ô vũ khí cố định
+    for (let i = 0; i < 5; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'weapon-slot empty';
+        slot.dataset.index = i;
+        
+        // Thêm số ô
+        const slotNumber = document.createElement('div');
+        slotNumber.className = 'slot-number';
+        slotNumber.textContent = (i + 1);
+        slot.appendChild(slotNumber);
+        
+        // Thêm sự kiện click
+        slot.addEventListener('click', () => {
+            if (player.equippedWeapons[i]) {
+                switchWeapon(player.equippedWeapons[i]);
+            }
+        });
+        
+        weaponBar.appendChild(slot);
+    }
+    
+    // Tạo ô hiển thị đuốc
+    const torchDisplay = document.createElement('div');
+    torchDisplay.id = 'torchDisplay';
+    torchDisplay.className = 'torch-display';
+    
+    // Icon đuốc
+    const torchIcon = document.createElement('div');
+    torchIcon.className = 'torch-icon';
+    torchIcon.innerHTML = '🔥';
+    torchDisplay.appendChild(torchIcon);
+    
+    // Số lượng đuốc
+    const torchCount = document.createElement('div');
+    torchCount.id = 'bottomTorchCount';
+    torchCount.className = 'torch-count';
+    torchCount.textContent = player.torchCount;
+    torchDisplay.appendChild(torchCount);
+    
+    // Gợi ý phím F
+    const keyHint = document.createElement('div');
+    keyHint.className = 'key-hint';
+    keyHint.textContent = '[F]';
+    torchDisplay.appendChild(keyHint);
+    
+    // Thêm sự kiện click
+    torchDisplay.addEventListener('click', () => {
+        placeTorch();
+    });
+    
+    // Thêm các phần tử vào DOM
+    bottomBar.appendChild(weaponBar);
+    bottomBar.appendChild(torchDisplay);
+    document.getElementById('gameContainer').appendChild(bottomBar);
+    
+    // Cập nhật lần đầu
+    updateBottomBar();
+}
+
+// Cập nhật trạng thái thanh vũ khí
+function updateBottomBar() {
+    if (!document.getElementById('bottomBar')) return;
+    
+    // Cập nhật số đuốc
+    const torchCount = document.getElementById('bottomTorchCount');
+    if (torchCount) {
+        torchCount.textContent = player.torchCount;
+    }
+    
+    // Cập nhật các ô vũ khí
+    const slots = document.querySelectorAll('.weapon-slot');
+    
+    slots.forEach((slot, index) => {
+        // Reset trạng thái
+        slot.className = 'weapon-slot empty';
+        slot.innerHTML = '';
+        
+        // Thêm số ô
+        const slotNumber = document.createElement('div');
+        slotNumber.className = 'slot-number';
+        slotNumber.textContent = (index + 1);
+        slot.appendChild(slotNumber);
+        
+        const weaponId = player.equippedWeapons[index];
+        
+        if (weaponId) {
+            // Có vũ khí
+            const weapon = getWeaponById(weaponId);
+            
+            // Kiểm tra vũ khí đang active
+            if (index === player.activeWeaponIndex) {
+                slot.classList.add('active');
+            } else {
+                slot.classList.remove('empty');
+            }
+            
+            // Thêm icon vũ khí (dùng ký tự thay thế)
+            const weaponIcon = document.createElement('div');
+            weaponIcon.className = 'weapon-icon';
+            
+            // Dùng ký tự emoji tạm thời
+            if (weaponId === 'pistol') {
+                weaponIcon.style.backgroundColor = '#FFD700';  // Gold
+                weaponIcon.style.width = '20px';
+                weaponIcon.style.height = '14px';
+                weaponIcon.style.margin = '0 auto 5px';
+                weaponIcon.style.borderRadius = '2px';
+                // Thêm phần nòng súng
+                const barrel = document.createElement('div');
+                barrel.style.width = '10px';
+                barrel.style.height = '4px';
+                barrel.style.backgroundColor = '#444';
+                barrel.style.margin = '-4px auto 5px';
+                barrel.style.borderRadius = '1px';
+                weaponIcon.appendChild(barrel);
+            } else if (weaponId === 'shotgun') {
+                weaponIcon.style.backgroundColor = '#FF4500';  // OrangeRed
+                weaponIcon.style.width = '25px';
+                weaponIcon.style.height = '10px';
+                weaponIcon.style.margin = '0 auto 5px';
+                weaponIcon.style.borderRadius = '2px';
+                // Thêm phần nòng súng
+                const barrel = document.createElement('div');
+                barrel.style.width = '15px';
+                barrel.style.height = '6px';
+                barrel.style.backgroundColor = '#444';
+                barrel.style.margin = '-3px auto 5px'; 
+                barrel.style.borderRadius = '1px';
+                weaponIcon.appendChild(barrel);
+            } else if (weaponId === 'assaultRifle') {
+                weaponIcon.style.backgroundColor = '#32CD32';  // LimeGreen
+                weaponIcon.style.width = '28px';
+                weaponIcon.style.height = '8px';
+                weaponIcon.style.margin = '0 auto 5px';
+                weaponIcon.style.borderRadius = '2px';
+                // Thêm phần nòng súng
+                const barrel = document.createElement('div');
+                barrel.style.width = '12px';
+                barrel.style.height = '4px';
+                barrel.style.backgroundColor = '#444';
+                barrel.style.margin = '-2px auto 5px';
+                barrel.style.borderRadius = '1px';
+                weaponIcon.appendChild(barrel);
+            } else if (weaponId === 'smg') {
+                weaponIcon.style.backgroundColor = '#1E90FF';  // DodgerBlue
+                weaponIcon.style.width = '22px';
+                weaponIcon.style.height = '12px';
+                weaponIcon.style.margin = '0 auto 5px';
+                weaponIcon.style.borderRadius = '2px';
+                // Thêm phần nòng súng
+                const barrel = document.createElement('div');
+                barrel.style.width = '8px';
+                barrel.style.height = '4px';
+                barrel.style.backgroundColor = '#444';
+                barrel.style.margin = '-3px auto 5px';
+                barrel.style.borderRadius = '1px';
+                weaponIcon.appendChild(barrel);
+            } else if (weaponId === 'sniperRifle') {
+                weaponIcon.style.backgroundColor = '#8A2BE2';  // BlueViolet
+                weaponIcon.style.width = '30px';
+                weaponIcon.style.height = '7px';
+                weaponIcon.style.margin = '0 auto 5px';
+                weaponIcon.style.borderRadius = '2px';
+                // Thêm phần nòng súng
+                const barrel = document.createElement('div');
+                barrel.style.width = '18px';
+                barrel.style.height = '3px';
+                barrel.style.backgroundColor = '#444';
+                barrel.style.margin = '-2px auto 5px';
+                barrel.style.borderRadius = '1px';
+                weaponIcon.appendChild(barrel);
+            }
+            
+            slot.appendChild(weaponIcon);
+            
+            // Thêm tên vũ khí
+            const weaponName = document.createElement('div');
+            weaponName.className = 'weapon-name';
+            weaponName.textContent = weapon.name;
+            slot.appendChild(weaponName);
+            
+            // Thêm thông tin đạn
+            const weaponAmmo = document.createElement('div');
+            weaponAmmo.className = 'weapon-ammo';
+            weaponAmmo.textContent = `${player.ammunition[weapon.ammoType].current}/${player.ammunition[weapon.ammoType].reserve}`;
+            slot.appendChild(weaponAmmo);
+        } else {
+            // Trống hoặc chưa mở khóa
+            if (index < WEAPONS.length) {
+                const weapon = WEAPONS[index];
+                
+                if (!weapon.unlocked) {
+                    slot.classList.add('locked');
+                    
+                    // Thêm icon khóa
+                    const lockIcon = document.createElement('div');
+                    lockIcon.className = 'weapon-icon';
+                    lockIcon.textContent = '🔒';
+                    slot.appendChild(lockIcon);
+                    
+                    // Thêm tên vũ khí
+                    const weaponName = document.createElement('div');
+                    weaponName.className = 'weapon-name';
+                    weaponName.textContent = weapon.name;
+                    slot.appendChild(weaponName);
+                    
+                    // Thêm giá tiền
+                    const weaponCost = document.createElement('div');
+                    weaponCost.className = 'weapon-ammo';
+                    weaponCost.textContent = `${weapon.cost} coins`;
+                    slot.appendChild(weaponCost);
+                }
+            }
+        }
+    });
+}
+
+// Tạo container thông báo nhận vật phẩm
+function createLootNotificationContainer() {
+    if (!document.getElementById('loot-notifications')) {
+        const container = document.createElement('div');
+        container.id = 'loot-notifications';
+        document.getElementById('gameContainer').appendChild(container);
+    }
+}
+
+// Hiển thị thông báo nhận vật phẩm cải tiến
+function showLootNotification(type, text) {
+    createLootNotificationContainer();
+    
+    const container = document.getElementById('loot-notifications');
+    const notification = document.createElement('div');
+    notification.className = `loot-notification ${type}`;
+    
+    // Icon container
+    const icon = document.createElement('div');
+    icon.className = 'loot-icon';
+    
+    switch (type) {
+        case 'coins':
+            icon.innerHTML = '<i class="icon">💰</i>';
+            icon.style.backgroundColor = 'rgba(255, 215, 0, 0.3)';
+            break;
+        case 'ammo':
+            icon.innerHTML = '<i class="icon">🔄</i>';
+            icon.style.backgroundColor = 'rgba(255, 69, 0, 0.3)';
+            break;
+        case 'health':
+            icon.innerHTML = '<i class="icon">❤️</i>';
+            icon.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+            break;
+        case 'torch':
+            icon.innerHTML = '<i class="icon">🔥</i>';
+            icon.style.backgroundColor = 'rgba(255, 165, 0, 0.3)';
+            break;
+        case 'attachment':
+            icon.innerHTML = '<i class="icon">🔧</i>';
+            icon.style.backgroundColor = 'rgba(65, 105, 225, 0.3)';
+            break;
+        case 'xp':
+            icon.innerHTML = '<i class="icon">✨</i>';
+            icon.style.backgroundColor = 'rgba(0, 255, 0, 0.3)';
+            break;
+        case 'progress':
+            icon.innerHTML = '<i class="icon">📊</i>';
+            icon.style.backgroundColor = 'rgba(100, 149, 237, 0.3)';
+            break;
+        default:
+            icon.innerHTML = '<i class="icon">📦</i>';
+            icon.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+    }
+    
+    // Text
+    const textElement = document.createElement('div');
+    textElement.className = 'loot-text';
+    textElement.textContent = text;
+    
+    notification.appendChild(icon);
+    notification.appendChild(textElement);
+    container.appendChild(notification);
+    
+    // Xóa sau 5 giây
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
+// Cập nhật hàm initUI() để thêm các UI mới
+function extendUI() {
+    // Thêm nút cài đặt
+    addSettingsButton();
+    
+    // Thêm CSS cho menu cài đặt nếu chưa có
+    addSettingsStyles();
+    
+    // Tạo thanh vũ khí mới + hiển thị đuốc
+    createBottomBar();
+    
+    // Tạo container thông báo loot
+    createLootNotificationContainer();
+}
+
+// Thêm CSS cho menu cài đặt
+function addSettingsStyles() {
+    // Kiểm tra nếu style đã tồn tại
+    if (document.getElementById('settingsStyles')) return;
+    
+    // Tạo style element
+    const style = document.createElement('style');
+    style.id = 'settingsStyles';
+    
+    style.textContent = `
+        .settings-section {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: rgba(40, 40, 60, 0.6);
+            border-radius: 5px;
+        }
+        
+        .settings-section h3 {
+            margin-top: 0;
+            color: #7ac6ff;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+        
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        /* Switch styling */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4a5264;
+            transition: .3s;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+        }
+        
+        input:checked + .slider {
+            background-color: #7ac6ff;
+        }
+        
+        input:focus + .slider {
+            box-shadow: 0 0 1px #7ac6ff;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+        
+        .slider.round {
+            border-radius: 30px;
+        }
+        
+        .slider.round:before {
+            border-radius: 50%;
+        }
+        
+        /* Slider controls */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 60%;
+            height: 8px;
+            background: #4a5264;
+            border-radius: 5px;
+            outline: none;
+        }
+        
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #7ac6ff;
+            cursor: pointer;
+        }
+        
+        input[type=range]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #7ac6ff;
+            cursor: pointer;
+        }
+    `;
+    
+    // Thêm vào head
+    document.head.appendChild(style);
 }

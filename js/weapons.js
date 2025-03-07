@@ -415,3 +415,72 @@ function getWeaponStatsDescription(weapon) {
     
     return description;
 }
+
+// Chức năng chuyển đổi vũ khí
+function switchWeapon(weaponId) {
+    // Tìm vũ khí theo ID
+    const weapon = getWeaponById(weaponId);
+    
+    // Kiểm tra vũ khí tồn tại và đã mở khóa
+    if (!weapon || !weapon.unlocked) return false;
+    
+    // Cập nhật vũ khí hiện tại
+    player.activeWeaponId = weaponId;
+    
+    // Cập nhật chỉ số active weapon index
+    const weaponIndex = player.equippedWeapons.indexOf(weaponId);
+    if (weaponIndex !== -1) {
+        player.activeWeaponIndex = weaponIndex;
+    } else {
+        // Nếu vũ khí chưa được trang bị, thêm vào nếu còn slot
+        if (player.equippedWeapons.length < 3) {
+            player.equippedWeapons.push(weaponId);
+            player.activeWeaponIndex = player.equippedWeapons.length - 1;
+        } else {
+            // Thay thế vũ khí hiện tại
+            player.equippedWeapons[player.activeWeaponIndex] = weaponId;
+        }
+    }
+    
+    // Tạo object vũ khí mới với các nâng cấp hiện tại
+    player.weapon = createWeapon(weaponId);
+    
+    // Cập nhật số đạn hiện tại nếu có sẵn trong ammunition
+    if (player.ammunition[weapon.ammoType]) {
+        player.weapon.ammo = player.ammunition[weapon.ammoType].current;
+    }
+    
+    // Cập nhật UI
+    updateUI();
+    
+    // Tạo hiệu ứng chuyển vũ khí
+    createEffect(
+        player.x,
+        player.y,
+        30, // radius
+        0.3, // duration
+        'weaponSwitch'
+    );
+    
+    return true;
+}
+
+function switchToPreviousWeapon() {
+    if (player.equippedWeapons.length <= 1) return;
+    
+    // Giảm index và đảm bảo nó không âm (quay vòng lại cuối nếu ở đầu)
+    player.activeWeaponIndex = (player.activeWeaponIndex - 1 + player.equippedWeapons.length) % player.equippedWeapons.length;
+    
+    // Chuyển sang vũ khí mới
+    switchWeapon(player.equippedWeapons[player.activeWeaponIndex]);
+}
+
+function switchToNextWeapon() {
+    if (player.equippedWeapons.length <= 1) return;
+    
+    // Tăng index và đảm bảo nó không vượt quá số vũ khí (quay về đầu nếu ở cuối)
+    player.activeWeaponIndex = (player.activeWeaponIndex + 1) % player.equippedWeapons.length;
+    
+    // Chuyển sang vũ khí mới
+    switchWeapon(player.equippedWeapons[player.activeWeaponIndex]);
+}

@@ -75,8 +75,8 @@ const player = {
 // Initialize player for a new game
 function initPlayer() {
     // Reset position
-    player.x = 100;
-    player.y = 100;
+    player.x = 0;
+    player.y = 0;
     player.startX = 0;
     player.startY = 0;
     
@@ -326,7 +326,7 @@ function checkTerritoryEffects() {
     }
     
     // Visual feedback when entering/leaving territory
-    if (!previousInTerritory && (player.inTerritory || player.inHomeRadius)) {
+    if (!previousInTerritory && !previousInHome && (player.inTerritory || player.inHomeRadius)) {
         // Just entered territory
         createScreenFlash('territory');
         showGameMessage("Entered Safe Territory");
@@ -335,8 +335,8 @@ function checkTerritoryEffects() {
         showGameMessage("Left Safe Territory");
     }
     
-    // Visual feedback for home radius
-    if (!previousInHome && player.inHomeRadius) {
+    // Visual feedback for home radius - chỉ khi KHÔNG ở trong territory trước đó
+    if (!previousInHome && !previousInTerritory && player.inHomeRadius) {
         showGameMessage("Entered Home Zone");
     }
 }
@@ -553,5 +553,334 @@ function addXP(amount) {
     }
     
     // Update UI
+    updateUI();
+}
+
+// Add torches to player inventory
+function addTorches(amount) {
+    player.torchCount += amount;
+    showGameMessage(`+${amount} Torch${amount > 1 ? 'es' : ''} added!`);
+    
+    // Create torch visual effect at player position
+    for (let i = 0; i < Math.min(amount, 3); i++) {
+        const angle = (i / 3) * Math.PI * 2;
+        const offsetX = Math.cos(angle) * 30;
+        const offsetY = Math.sin(angle) * 30;
+        
+        // Create torch visual effect
+        createEffect(
+            player.x + offsetX,
+            player.y + offsetY,
+            15, // radius
+            2, // duration
+            'torch'
+        );
+    }
+    
+    // Update UI
+    updateUI();
+}
+
+// Add ammunition to player reserves
+function addAmmunition(ammoType, amount) {
+    if (!player.ammunition[ammoType]) return;
+    
+    const ammoConfig = CONFIG.AMMO_TYPES[ammoType];
+    if (!ammoConfig) return;
+    
+    // Add ammo to reserves, capped at maximum
+    player.ammunition[ammoType].reserve = Math.min(
+        player.ammunition[ammoType].reserve + amount,
+        ammoConfig.maxReserve
+    );
+    
+    // Update UI
+    updateUI();
+}
+
+// Place a torch at player's position
+function placeTorch() {
+    // Check if player has torches
+    if (player.torchCount <= 0) {
+        showGameMessage("No torches available!");
+        return;
+    }
+    
+    // Get current section
+    const sectionX = Math.floor(player.x / CONFIG.SECTION_SIZE);
+    const sectionY = Math.floor(player.y / CONFIG.SECTION_SIZE);
+    
+    // Find the section object
+    const section = mapSections.find(s => 
+        Math.floor(s.x / CONFIG.SECTION_SIZE) === sectionX && 
+        Math.floor(s.y / CONFIG.SECTION_SIZE) === sectionY
+    );
+    
+    // Only allow placing torches in cleared sections
+    if (!section || !section.isCleared) {
+        showGameMessage("Clear this area of zombies first!");
+        createScreenFlash('damage'); // Thêm hiệu ứng flash đỏ để cảnh báo
+        return;
+    }
+    
+    // Check if this section is already territory
+    if (section.isTerritory) {
+        showGameMessage("This section is already claimed territory.");
+        return;
+    }
+    
+    // Check if we're near an existing torch (avoid placing too close)
+    const sectionCenterX = section.x + CONFIG.SECTION_SIZE / 2;
+    const sectionCenterY = section.y + CONFIG.SECTION_SIZE / 2;
+    const isLeftHalf = player.x < sectionCenterX;
+    const isTopHalf = player.y < sectionCenterY;
+    
+    let currentQuadrant = "";
+    if (isTopHalf && isLeftHalf) currentQuadrant = "top-left";
+    else if (isTopHalf && !isLeftHalf) currentQuadrant = "top-right";
+    else if (!isTopHalf && isLeftHalf) currentQuadrant = "bottom-left";
+    else currentQuadrant = "bottom-right";
+    
+    // Check if there's already a torch in this quadrant
+    if (section.torches) {
+        let quadrantHasTorch = false;
+        
+        for (const torch of section.torches) {
+            const torchIsLeftHalf = torch.x < sectionCenterX;
+            const torchIsTopHalf = torch.y < sectionCenterY;
+            
+            let torchQuadrant = "";
+            if (torchIsTopHalf && torchIsLeftHalf) torchQuadrant = "top-left";
+            else if (torchIsTopHalf && !torchIsLeftHalf) torchQuadrant = "top-right";
+            else if (!torchIsTopHalf && torchIsLeftHalf) torchQuadrant = "bottom-left";
+            else torchQuadrant = "bottom-right";
+            
+            if (torchQuadrant === currentQuadrant) {
+                quadrantHasTorch = true;
+                break;
+            }
+        }
+        
+        if (quadrantHasTorch) {
+            showGameMessage(`A torch is already placed in the ${currentQuadrant} quadrant!`);
+            return;
+        }
+    }
+    
+    // For backward compatibility, still check minimum distance
+    const minTorchDistance = 100; // Minimum distance between torches
+    
+    // Existing torches in this section
+    if (section.torches) {
+        for (const torch of section.torches) {
+            const dist = distance(player.x, player.y, torch.x, torch.y);
+            if (dist < minTorchDistance) {
+                showGameMessage("Too close to another torch!");
+                return;
+            }
+        }
+    }
+    
+    // Initialize torches array if not exists
+    if (!section.torches) {
+        section.torches = [];
+    }
+    
+    // Add torch at player position
+    section.torches.push({
+        x: player.x,
+        y: player.y,
+        radius: CONFIG.TERRITORY.TORCH_RADIUS,
+        lightRadius: CONFIG.TERRITORY.TORCH_LIGHT_RADIUS,
+        time: performance.now()
+    });
+    
+    // Decrease torch count
+    player.torchCount--;
+    
+    // Create torch placement effect
+    createEffect(
+        player.x,
+        player.y,
+        CONFIG.TERRITORY.TORCH_LIGHT_RADIUS,
+        1, // duration
+        'torchActivate'
+    );
+    
+    // Check if territory can be claimed (4 torches needed)
+    if (section.torches.length >= 4) {
+        claimTerritory(section);
+    } else {
+        showGameMessage(`Torch placed! ${4 - section.torches.length} more needed to claim territory.`);
+    }
+    
+    // Update UI
+    updateUI();
+}
+
+// Claim a section as territory
+function claimTerritory(section) {
+    // Mark section as territory
+    section.isTerritory = true;
+    
+    // Update player stats
+    player.territoriesClaimed++;
+    
+    // Create territory claim effect
+    createEffect(
+        section.x + CONFIG.SECTION_SIZE / 2,
+        section.y + CONFIG.SECTION_SIZE / 2,
+        CONFIG.SECTION_SIZE / 2,
+        2, // duration
+        'territoryClaim'
+    );
+    
+    // Create screen flash
+    createScreenFlash('territory');
+    
+    // Show message
+    showGameMessage("Territory claimed! You gain health regen and other bonuses inside.");
+    
+    // Thêm hiệu ứng phần thưởng
+    // XP bonus
+    const xpBonus = 50 * player.level;
+    addXP(xpBonus);
+    
+    // Hiệu ứng văn bản
+    createFloatingText(
+        section.x + CONFIG.SECTION_SIZE / 2,
+        section.y + CONFIG.SECTION_SIZE / 2 - 20,
+        `+${xpBonus} XP BONUS!`,
+        '#00FF00',
+        3
+    );
+    
+    // Hiệu ứng hồi máu ngay lập tức
+    const healthBonus = Math.min(player.maxHealth * 0.2, player.maxHealth - player.health);
+    if (healthBonus > 0) {
+        player.health += healthBonus;
+        
+        createFloatingText(
+            section.x + CONFIG.SECTION_SIZE / 2,
+            section.y + CONFIG.SECTION_SIZE / 2,
+            `+${Math.ceil(healthBonus)} HEALTH`,
+            '#FF0000',
+            3
+        );
+    }
+    
+    // Update UI
+    updateUI();
+}
+
+// Áp dụng nâng cấp cho nhân vật
+function applyStatUpgrade(upgrade) {
+    // Kiểm tra xem thuộc tính tồn tại chưa
+    if (!(upgrade.property in player)) {
+        console.error(`Property ${upgrade.property} does not exist on player`);
+        return false;
+    }
+    
+    // Áp dụng nâng cấp dựa trên loại
+    if (upgrade.value) {
+        // Trường hợp tăng giá trị cố định
+        player[upgrade.property] += upgrade.value;
+        
+        // Giới hạn giá trị tối đa nếu có
+        if (upgrade.max && player[upgrade.property] > upgrade.max) {
+            player[upgrade.property] = upgrade.max;
+        }
+        
+        // Hồi máu nếu đặt thuộc tính healOnUpgrade
+        if (upgrade.healOnUpgrade && upgrade.property === 'maxHealth') {
+            player.health += upgrade.value;
+        }
+    } else if (upgrade.multiplier) {
+        // Trường hợp nhân với hệ số
+        player[upgrade.property] *= upgrade.multiplier;
+    }
+    
+    // Tạo hiệu ứng nâng cấp
+    createEffect(
+        player.x,
+        player.y,
+        40, // radius
+        1, // duration
+        'statUpgrade',
+        {
+            text: `${upgrade.name} +`,
+            color: '#00FF00'
+        }
+    );
+    
+    // Cập nhật UI
+    updateUI();
+    
+    return true;
+}
+
+// Xử lý người chơi bị tấn công
+function damagePlayer(damage) {
+    // Kiểm tra xem người chơi có đang bất tử không
+    if (player.invincible) return;
+    
+    // Áp dụng áo giáp trước (nếu có)
+    if (player.armor > 0) {
+        // Giáp hấp thụ 50% sát thương
+        const armorAbsorption = 0.5;
+        const damageTaken = damage * armorAbsorption;
+        
+        // Giảm giáp dựa trên sát thương được hấp thụ
+        player.armor -= damageTaken;
+        
+        // Nếu giáp hết, phần sát thương còn lại chuyển sang máu
+        if (player.armor < 0) {
+            // Phần sát thương vượt quá giáp
+            const remainingDamage = -player.armor;
+            player.armor = 0;
+            
+            // Trừ máu người chơi
+            player.health -= remainingDamage + (damage * (1 - armorAbsorption));
+        } else {
+            // Giáp vẫn còn, trừ máu với phần không được hấp thụ
+            player.health -= damage * (1 - armorAbsorption);
+        }
+    } else {
+        // Không có giáp, trừ toàn bộ sát thương vào máu
+        player.health -= damage;
+    }
+    
+    // Kiểm tra game over
+    if (player.health <= 0) {
+        player.health = 0;
+        gameOver();
+        return;
+    }
+    
+    // Kích hoạt thời gian bất tử sau khi bị tấn công
+    player.invincible = true;
+    player.invincibleTimer = 0;
+    
+    // Tạo hiệu ứng bị tấn công
+    createScreenFlash('damage');
+    
+    // Hiển thị lượng sát thương
+    createEffect(
+        player.x,
+        player.y - player.radius - 20,
+        10,
+        0.7,
+        'floatingText',
+        {
+            text: `-${Math.round(damage)}`,
+            color: '#FF0000',
+            dy: -30
+        }
+    );
+    
+    // Chơi âm thanh bị đánh
+    // playSound('playerHit');
+    
+    // Cập nhật UI
     updateUI();
 }
