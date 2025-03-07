@@ -14,6 +14,7 @@ function initGame() {
     canvas.addEventListener('mousemove', handleMouseMove);
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('wheel', handleMouseWheel);
     window.addEventListener('resize', handleResize);
     
     // Initialize player
@@ -72,12 +73,15 @@ function update(currentTime) {
         movePlayer(deltaTime);
         updateBullets(deltaTime);
         
-        // Cập nhật zombie với deltaTime cố định để đảm bảo tốc độ di chuyển
-        const fixedDelta = 1/60; // 60fps đã cố định
+        // Update zombies with fixed deltaTime to ensure consistent speed
+        const fixedDelta = 1/60; // 60fps fixed
         updateZombies(fixedDelta);
         
         updateEffects(deltaTime);
         updatePickups(deltaTime);
+        
+        // Check all territory effects
+        checkAllTerritoryEffects();
         
         // Spawn zombies based on discovered map sections
         spawnZombiesInDiscoveredSections();
@@ -95,11 +99,19 @@ function update(currentTime) {
         // Draw minimap
         drawMinimap();
         
-        // Log zombie count for debugging
-        if (zombies.length > 0 && currentTime % 1000 < 20) {
-            console.log("Zombie count:", zombies.length);
-            console.log("First zombie:", zombies[0]);
+        // Draw weapon quick selector UI
+        drawWeaponSelector();
+        
+        // Draw torch count indicator
+        drawTorchIndicator();
+        
+        // Draw territory indicator
+        if (player.inTerritory || player.inHomeRadius) {
+            drawTerritoryIndicator();
         }
+        
+        // Draw section clearing progress if player is in an uncleared section
+        drawSectionClearingProgress();
     }
     
     gameLoop = requestAnimationFrame(update);
@@ -132,6 +144,8 @@ function handleInput(deltaTime) {
     if (keys.r && !player.reloading && player.weapon.ammo < player.weapon.maxAmmo) {
         startReload();
     }
+    
+    // Quick weapon switching with 1-3 keys is handled in keydown event
 }
 
 // Update bullets
@@ -206,129 +220,12 @@ function drawBullets() {
     }
 }
 
-// Update visual effects
-function updateEffects(deltaTime) {
-    for (let i = effects.length - 1; i >= 0; i--) {
-        const effect = effects[i];
-        
-        // Update lifetime
-        effect.timeAlive += deltaTime;
-        
-        // Remove effects that have expired
-        if (effect.timeAlive >= effect.duration) {
-            effects.splice(i, 1);
-            continue;
-        }
-        
-        // Update position for moving effects
-        if (effect.dx || effect.dy) {
-            effect.x += effect.dx * deltaTime;
-            effect.y += effect.dy * deltaTime;
-        }
-    }
-}
-
-// Draw visual effects
-function drawEffects() {
-    for (let i = 0; i < effects.length; i++) {
-        const effect = effects[i];
-        
-        // Convert to screen coordinates
-        const screenX = effect.x - cameraX;
-        const screenY = effect.y - cameraY;
-        
-        // Only draw if on screen (with padding)
-        if (screenX >= -50 && screenX <= canvas.width + 50 &&
-            screenY >= -50 && screenY <= canvas.height + 50) {
-            
-            const progress = effect.timeAlive / effect.duration;
-            
-            if (effect.type === 'muzzleFlash') {
-                effect.opacity = 1 - progress;
-                
-                ctx.fillStyle = effect.color || `rgba(255, 200, 0, ${effect.opacity})`;
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, effect.radius * (1 - progress), 0, Math.PI * 2);
-                ctx.fill();
-            } else if (effect.type === 'blood') {
-                effect.opacity = 1 - progress;
-                
-                ctx.fillStyle = `rgba(255, 0, 0, ${effect.opacity})`;
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, effect.radius * (1 - progress * 0.5), 0, Math.PI * 2);
-                ctx.fill();
-            } else if (effect.type === 'levelUp') {
-                // Level up circular wave effect
-                ctx.strokeStyle = `rgba(0, 255, 100, ${1 - progress})`;
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, effect.radius * progress * 3, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                // Second wave
-                ctx.strokeStyle = `rgba(0, 200, 255, ${1 - progress})`;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, effect.radius * progress * 2, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                // Inner glow
-                ctx.fillStyle = `rgba(255, 255, 255, ${1 - progress})`;
-                ctx.beginPath();
-                ctx.arc(screenX, screenY, effect.radius * (1 - progress * 0.5), 0, Math.PI * 2);
-                ctx.fill();
-            } else if (effect.type === 'critText') {
-                // Critical hit text indicator
-                ctx.font = `${20 - progress * 5}px Orbitron`;
-                ctx.fillStyle = `rgba(255, 50, 0, ${1 - progress})`;
-                ctx.textAlign = 'center';
-                ctx.fillText('CRITICAL!', screenX, screenY - 10 - progress * 20);
-            }
-        }
-    }
-}
-
 // Update pickups
 function updatePickups(deltaTime) {
     for (let i = pickups.length - 1; i >= 0; i--) {
         const pickup = pickups[i];
         
-        // No update logic for now, just check if player collected
-        const dx = player.x - pickup.x;
-        const dy = player.y - pickup.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < player.radius + pickup.radius) {
-            // Player collected the pickup
-            if (pickup.type === 'health') {
-                player.health = Math.min(player.health + pickup.value, player.maxHealth);
-                showGameMessage("+20 Health");
-            } else if (pickup.type === 'ammo') {
-                player.weapon.ammo = player.weapon.maxAmmo;
-                showGameMessage("Ammo Restored");
-            } else if (pickup.type === 'coins') {
-                player.coins += pickup.value;
-                showGameMessage(`+${pickup.value} Coins`);
-            } else if (pickup.type === 'armor') {
-                player.armor = Math.min(player.armor + pickup.value, player.maxArmor);
-                showGameMessage("+15 Armor");
-            }
-            
-            // Add pickup effect
-            createEffect(
-                pickup.x,
-                pickup.y,
-                20,
-                0.3,
-                'pickup'
-            );
-            
-            // Remove pickup
-            pickups.splice(i, 1);
-            
-            // Update UI
-            updateUI();
-        }
+        // Add floating animation or other updates if needed
     }
 }
 
@@ -398,6 +295,30 @@ function drawPickups() {
                 ctx.lineTo(screenX + pickup.radius/2, screenY + floatOffset);
                 ctx.closePath();
                 ctx.fill();
+            } else if (pickup.type === 'torch') {
+                // Draw torch pickup
+                ctx.fillStyle = pickup.color;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY + floatOffset, pickup.radius * pulseScale, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw flame
+                const time = performance.now() / 300;
+                const flameHeight = 5 + Math.sin(time) * 2;
+                
+                // Create flame gradient
+                const gradient = ctx.createRadialGradient(
+                    screenX, screenY + floatOffset - 5, 1,
+                    screenX, screenY + floatOffset - 5, flameHeight
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 0, 0.9)');
+                gradient.addColorStop(0.6, 'rgba(255, 165, 0, 0.7)');
+                gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY + floatOffset - 5, flameHeight, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
     }
@@ -420,8 +341,14 @@ function drawPlayer() {
         // Invincibility flash effect
         const flashRate = Math.floor(performance.now() / 100) % 2 === 0;
         ctx.fillStyle = flashRate ? '#FFFFFF' : '#FF6347';
+    } else if (player.inTerritory || player.inHomeRadius) {
+        // Territory boost effect
+        const pulseRate = Math.sin(performance.now() / 500) * 0.2 + 0.8;
+        ctx.fillStyle = player.inHomeRadius ? 
+            `rgba(255, 215, 0, ${pulseRate})` : // Gold for home
+            `rgba(255, 99, 71, ${pulseRate})`; // Tomato with territory boost
     } else {
-        ctx.fillStyle = '#FF6347'; // Tomato color
+        ctx.fillStyle = '#FF6347'; // Regular tomato color
     }
     
     ctx.beginPath();
@@ -463,9 +390,242 @@ function drawPlayer() {
         ctx.fillText('RELOADING', screenX, screenY - player.radius - 10);
     }
     
-    // Draw weapon name
+    // Draw territory status indicator if in territory
+    if (player.inTerritory || player.inHomeRadius) {
+        // Draw glowing aura
+        const auraSize = player.radius * 1.3;
+        const pulseScale = 0.8 + Math.sin(performance.now() / 500) * 0.2;
+        
+        ctx.beginPath();
+        const gradient = ctx.createRadialGradient(
+            screenX, screenY, player.radius,
+            screenX, screenY, auraSize * pulseScale
+        );
+        
+        if (player.inHomeRadius) {
+            // Gold aura for home base
+            gradient.addColorStop(0, 'rgba(255, 215, 0, 0.1)');
+            gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        } else {
+            // Green aura for territory
+            gradient.addColorStop(0, 'rgba(0, 255, 100, 0.1)');
+            gradient.addColorStop(1, 'rgba(0, 255, 100, 0)');
+        }
+        
+        ctx.fillStyle = gradient;
+        ctx.arc(screenX, screenY, auraSize * pulseScale, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Draw weapon name and ammo
     ctx.fillStyle = '#FFFFFF';
     ctx.font = '10px Orbitron';
     ctx.textAlign = 'center';
+    
+    // Show active weapon name
     ctx.fillText(player.weapon.name.toUpperCase(), screenX, screenY + player.radius + 15);
+    
+    // Show ammo count
+    const ammoText = `${player.weapon.ammo}/${player.ammunition[player.weapon.ammoType].reserve}`;
+    ctx.fillText(ammoText, screenX, screenY + player.radius + 30);
+}
+
+// Draw weapon selector UI
+function drawWeaponSelector() {
+    if (player.equippedWeapons.length <= 1) return;
+    
+    const topMargin = 20;
+    const weaponBoxSize = 60;
+    const spacing = 10;
+    const totalWidth = player.equippedWeapons.length * weaponBoxSize + (player.equippedWeapons.length - 1) * spacing;
+    const startX = (canvas.width - totalWidth) / 2;
+    
+    for (let i = 0; i < player.equippedWeapons.length; i++) {
+        const weaponId = player.equippedWeapons[i];
+        const weaponData = getWeaponById(weaponId);
+        const isActive = i === player.activeWeaponIndex;
+        
+        const boxX = startX + i * (weaponBoxSize + spacing);
+        const boxY = topMargin;
+        
+        // Draw selector box
+        ctx.fillStyle = isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.5)';
+        ctx.strokeStyle = isActive ? weaponData.color : '#555';
+        ctx.lineWidth = isActive ? 3 : 1;
+        
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, weaponBoxSize, weaponBoxSize, 5);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Draw weapon number
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '14px Orbitron';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${i+1}`, boxX + 5, boxY + 15);
+        
+        // Draw weapon name
+        ctx.font = '10px Orbitron';
+        ctx.fillStyle = isActive ? '#FFFFFF' : '#AAA';
+        ctx.textAlign = 'center';
+        ctx.fillText(weaponData.name, boxX + weaponBoxSize/2, boxY + weaponBoxSize - 10);
+        
+        // Draw ammo
+        const ammoCount = player.ammunition[weaponData.ammoType].current;
+        const reserveAmmo = player.ammunition[weaponData.ammoType].reserve;
+        ctx.fillText(`${ammoCount}/${reserveAmmo}`, boxX + weaponBoxSize/2, boxY + weaponBoxSize - 25);
+    }
+}
+
+// Draw torch indicator
+function drawTorchIndicator() {
+    const padding = 20;
+    const iconSize = 30;
+    const textOffset = 5;
+    
+    // Position in the top-right corner
+    const x = canvas.width - padding - iconSize;
+    const y = padding + iconSize;
+    
+    // Draw torch icon
+    ctx.fillStyle = '#A0522D'; // Brown torch handle
+    ctx.fillRect(x - 2, y - iconSize/2, 4, iconSize/2);
+    
+    // Draw torch head
+    ctx.fillStyle = '#FFA500'; // Orange flame
+    ctx.beginPath();
+    ctx.arc(x, y - iconSize/2, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Animate flame
+    const time = performance.now() / 200;
+    const flameHeight = 10 + Math.sin(time) * 3;
+    
+    // Create flame gradient
+    const gradient = ctx.createRadialGradient(
+        x, y - iconSize/2 - 5, 2,
+        x, y - iconSize/2 - 5, flameHeight
+    );
+    gradient.addColorStop(0, 'rgba(255, 255, 0, 0.9)');
+    gradient.addColorStop(0.4, 'rgba(255, 165, 0, 0.7)');
+    gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y - iconSize/2 - 5, flameHeight, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw count text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '18px Orbitron';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${player.torchCount}`, x - iconSize/2 - textOffset, y);
+    
+    // Draw F key indicator
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = '12px Orbitron';
+    ctx.fillText('[F]', x - iconSize/2 - textOffset, y + 15);
+}
+
+// Draw territory indicator when in territory
+function drawTerritoryIndicator() {
+    const padding = 20;
+    const iconSize = 30;
+    
+    // Position below the torch indicator
+    const x = canvas.width - padding - iconSize;
+    const y = padding + iconSize * 3;
+    
+    // Draw territory icon (shield)
+    ctx.beginPath();
+    ctx.moveTo(x, y - iconSize);
+    ctx.lineTo(x - iconSize/2, y - iconSize/2);
+    ctx.lineTo(x - iconSize/2, y + iconSize/2);
+    ctx.lineTo(x, y + iconSize/2 + 5);
+    ctx.lineTo(x + iconSize/2, y + iconSize/2);
+    ctx.lineTo(x + iconSize/2, y - iconSize/2);
+    ctx.closePath();
+    
+    // Fill with pulsing color based on territory type
+    const pulseIntensity = Math.sin(performance.now() / 500) * 0.2 + 0.8;
+    
+    if (player.inHomeRadius) {
+        ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity})`; // Gold for home
+    } else {
+        ctx.fillStyle = `rgba(0, 255, 100, ${pulseIntensity})`; // Green for territory
+    }
+    ctx.fill();
+    
+    // Draw icon border
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Draw text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '12px Orbitron';
+    ctx.textAlign = 'right';
+    ctx.fillText(player.inHomeRadius ? 'HOME ZONE' : 'TERRITORY', x - iconSize/2 - 5, y);
+    
+    // Draw effect
+    ctx.font = '10px Orbitron';
+    ctx.fillText('HEALTH REGEN', x - iconSize/2 - 5, y + 12);
+    ctx.fillText('DAMAGE BOOST', x - iconSize/2 - 5, y + 24);
+}
+
+// Draw section clearing progress
+function drawSectionClearingProgress() {
+    // Find current section
+    const sectionX = Math.floor(player.x / CONFIG.SECTION_SIZE);
+    const sectionY = Math.floor(player.y / CONFIG.SECTION_SIZE);
+    
+    // Find the section object
+    const currentSection = mapSections.find(s => 
+        Math.floor(s.x / CONFIG.SECTION_SIZE) === sectionX && 
+        Math.floor(s.y / CONFIG.SECTION_SIZE) === sectionY
+    );
+    
+    // Only show progress for uncleared sections with zombies
+    if (!currentSection || currentSection.isCleared || currentSection.zombiesTotal === 0) return;
+    
+    // Calculate progress
+    const progress = ((currentSection.zombiesTotal - currentSection.zombiesRemaining) / currentSection.zombiesTotal) * 100;
+    
+    // Draw progress bar at the top center of screen
+    const barWidth = 200;
+    const barHeight = 20;
+    const barX = (canvas.width - barWidth) / 2;
+    const barY = 20;
+    
+    // Draw background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+    
+    // Draw progress
+    ctx.fillStyle = currentSection.isCleared ? 'rgba(0, 255, 100, 0.7)' : 'rgba(255, 100, 0, 0.7)';
+    ctx.fillRect(barX, barY, barWidth * (progress / 100), barHeight);
+    
+    // Draw border
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(barX, barY, barWidth, barHeight);
+    
+    // Draw text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '12px Orbitron';
+    ctx.textAlign = 'center';
+    ctx.fillText(
+        `SECTION CLEARING: ${Math.floor(progress)}%`, 
+        barX + barWidth / 2, 
+        barY + barHeight / 2 + 4
+    );
+    
+    // Draw zombies remaining
+    ctx.font = '10px Orbitron';
+    ctx.textAlign = 'center';
+    ctx.fillText(
+        `${currentSection.zombiesRemaining}/${currentSection.zombiesTotal} zombies remaining`, 
+        barX + barWidth / 2, 
+        barY + barHeight + 15
+    );
 }

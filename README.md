@@ -17,7 +17,7 @@ zombie-shooter/
 │   ├── player.js               # Hệ thống người chơi
 │   ├── weapons.js              # Hệ thống vũ khí
 │   ├── zombies.js              # Logic zombie và AI
-│   ├── map.js                  # Hệ thống bản đồ
+│   ├── map.js                  # Hệ thống bản đồ và lãnh thổ
 │   ├── ui.js                   # Giao diện người dùng và menu
 │   └── game.js                 # Logic chính của game
 │
@@ -34,28 +34,9 @@ zombie-shooter/
 
 3. Sao chép nội dung của mỗi file từ các artifact vào file tương ứng
 
-4. Đối với file HTML, thêm đường dẫn đến thư mục `js/` (Hiện tại đang link trực tiếp đến root)
-   ```html
-   <!-- Thay đổi từ -->
-   <script src="config.js"></script>
-   
-   <!-- Thành -->
-   <script src="js/config.js"></script>
-   ```
+4. Đảm bảo tất cả các file script được đặt trong thư mục `js/`
 
-5. Thêm link đến file CSS flash screen trong index.html:
-   ```html
-   <head>
-       <!-- ... các phần khác ... -->
-       <link href="styles.css" rel="stylesheet">
-       <link href="screen-flash.css" rel="stylesheet">
-   </head>
-   ```
-
-## Chạy game
-
-1. Mở file `index.html` trong trình duyệt web hiện đại (Chrome, Firefox, Edge, v.v.)
-2. Game sẽ bắt đầu tự động sau khi màn hình loading hoàn tất
+5. Mở file `index.html` trong trình duyệt web hiện đại để bắt đầu chơi
 
 ## Điều khiển
 
@@ -64,23 +45,73 @@ zombie-shooter/
 - **Nạp đạn**: Phím R
 - **Mở cửa hàng**: Phím E hoặc nút Shop
 - **Nâng cấp vũ khí**: Phím Tab hoặc nút Upgrade Weapon
+- **Đặt đuốc lãnh thổ**: Phím F
+- **Chuyển vũ khí**: Phím Q (tiếp theo), cuộn chuột hoặc phím số 1-3
+- **Tương tác với rương**: Tự động khi đến gần
 
 ## Tính năng chính
 
-1. **Bản đồ vô hạn**: Không giới hạn không gian, độ khó tăng theo khoảng cách
-2. **Hệ thống nhân vật**: Tăng cấp chỉ số (sát thương, tỉ lệ chí mạng, tốc độ di chuyển, máu)
-3. **Hệ thống vũ khí**: Nhiều loại vũ khí với đặc tính khác nhau, có thể nâng cấp
-4. **Zombie đa dạng**: Bốn loại zombie với hành vi và chỉ số khác nhau
-5. **Minimap**: Hiện thị vị trí zombie và khu vực đã khám phá
+### 1. Hệ thống Lãnh thổ
+- **Dọn dẹp Section**: Mỗi section có số lượng zombie cần tiêu diệt cố định
+- **Đặt đuốc đánh dấu**: Đặt 4 đuốc ở 4 góc của section đã dọn dẹp để biến thành lãnh thổ
+- **Hiệu ứng lãnh thổ**: Tự động hồi máu, tăng sát thương, tăng tốc độ di chuyển
+- **Khu vực nhà chính**: Khu vực xuất phát có hiệu ứng lãnh thổ mạnh hơn
+
+### 2. Hệ thống Rương Báu
+- **Mở rương kho báu**: Xuất hiện sau khi dọn sạch zombie trong section
+- **Phần thưởng đa dạng**: Tiền, đạn, đuốc lãnh thổ, phụ kiện vũ khí
+
+### 3. Hệ thống Đạn Dược
+- **Kho đạn riêng biệt**: Mỗi loại vũ khí có loại đạn riêng
+- **Nạp đạn từ kho dự trữ**: Hoạt động giống như FPS thực tế
+- **Mua đạn tại cửa hàng**: Bổ sung đạn dự trữ bằng tiền xu
+
+### 4. Hệ thống Vũ khí Nâng cấp
+- **Phụ kiện vũ khí**: Gắn các phụ kiện (ống ngắm, báng súng, ống giảm thanh...)
+- **Tùy chỉnh vũ khí**: Nâng cấp sát thương, tốc độ bắn, độ chính xác
+- **Chuyển đổi nhanh**: Chuyển đổi giữa tối đa 3 vũ khí đã trang bị
+
+### 5. Hệ thống UI cải tiến
+- **Thanh tiến độ dọn dẹp section**: Hiển thị tiến trình dọn dẹp zombie
+- **Hiển thị trạng thái lãnh thổ**: Chỉ báo lãnh thổ và các hiệu ứng đang kích hoạt
+- **Chọn vũ khí nhanh**: UI chọn vũ khí trực quan ở phía trên màn hình
+- **Hiển thị đuốc lãnh thổ**: Hiển thị số lượng đuốc hiện có
+
+## Cơ chế Mới
+
+### Dọn dẹp Section
+1. Mỗi section có một số lượng zombie cố định dựa trên độ khó
+2. Tiêu diệt tất cả zombie để "dọn dẹp" section
+3. Section đã dọn dẹp sẽ hiển thị rương báu
+4. Section đã dọn sẽ không xuất hiện zombie nữa
+
+### Đánh dấu Lãnh thổ
+1. Sau khi section đã dọn dẹp, sử dụng đuốc để đánh dấu (phím F)
+2. Cần đặt 4 đuốc ở 4 góc của section
+3. Section trở thành lãnh thổ, cung cấp các hiệu ứng tích cực
+4. Zombie bị làm chậm và nhận sát thương liên tục khi ở trong lãnh thổ
+
+### Rương Kho Báu
+1. Xuất hiện tại trung tâm section đã dọn dẹp
+2. Mở rương bằng cách đến gần
+3. Phần thưởng dựa theo độ khó của section
+4. Có thể nhận được đuốc, đạn, tiền xu, phụ kiện vũ khí
 
 ## Mở rộng
 
-Bạn có thể dễ dàng mở rộng game bằng cách:
+Game đã được cấu trúc để dễ dàng mở rộng:
+1. Thêm loại zombie mới trong `config.js` và `zombies.js`
+2. Thêm vũ khí mới trong `weapons.js`
+3. Thêm phụ kiện mới trong `config.js` (phần ATTACHMENTS)
+4. Thêm hiệu ứng lãnh thổ mới trong `player.js` và `zombies.js`
 
-1. Thêm vũ khí mới vào `weapons.js`
-2. Thêm loại zombie mới vào `config.js` và `zombies.js`
-3. Thêm nâng cấp mới vào `config.js`
-4. Thêm âm thanh và hình ảnh (cần thêm code để hỗ trợ)
+## Chiến lược chơi
+
+1. Dọn dẹp các section gần để xây dựng mạng lưới lãnh thổ an toàn
+2. Mua và nâng cấp vũ khí phù hợp với phong cách chơi
+3. Thu thập phụ kiện để cải thiện hiệu suất vũ khí
+4. Mở rộng lãnh thổ để có nhiều khu vực an toàn để hồi máu và tái tổ chức
+5. Tiêu diệt zombie từ trong lãnh thổ để nhận hiệu ứng tăng sát thương
 
 ## Lưu ý
 

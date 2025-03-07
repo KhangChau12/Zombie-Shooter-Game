@@ -7,7 +7,7 @@ const CONFIG = {
     
     // Map generation
     MAP_INFINITE: true,
-    SECTION_SIZE: 500,
+    SECTION_SIZE: 1500,  // Tăng từ 500 lên 1500
     
     // Player settings
     PLAYER_START_STATS: {
@@ -20,6 +20,174 @@ const CONFIG = {
         baseDamage: 10,
         critChance: 5, // percentage
         critMultiplier: 1.5
+    },
+    
+    // Territory system
+    TERRITORY: {
+        HEALTH_REGEN: 5,         // Health regen per second in territory
+        SPEED_BOOST: 1.2,        // Movement speed multiplier in territory
+        DAMAGE_BOOST: 1.15,      // Damage multiplier in territory
+        ZOMBIE_SLOW: 0.7,        // Zombie speed multiplier in territory
+        ZOMBIE_DAMAGE: 2,        // Damage per second to zombies in territory
+        HOME_RADIUS: 150,        // Home base radius
+        HOME_BONUS_MULTIPLIER: 1.5, // Bonus multiplier for effects near home
+        TORCH_INITIAL: 3,        // Starting number of torches
+        TORCH_RADIUS: 15,        // Visual radius of torch
+        TORCH_LIGHT_RADIUS: 80,  // Light radius of torch
+        TORCH_COST: 150,         // Cost to buy a new torch
+    },
+    
+    // Ammunition system
+    AMMO_TYPES: {
+        pistol: {
+            name: 'Pistol Rounds',
+            color: '#FFD700',
+            packSize: 30,
+            maxReserve: 150,
+            cost: 50
+        },
+        shotgun: {
+            name: 'Shotgun Shells',
+            color: '#FF4500',
+            packSize: 8,
+            maxReserve: 64,
+            cost: 100
+        },
+        rifle: {
+            name: 'Rifle Rounds',
+            color: '#32CD32',
+            packSize: 40,
+            maxReserve: 240,
+            cost: 150
+        },
+        smg: {
+            name: 'SMG Rounds',
+            color: '#1E90FF',
+            packSize: 60,
+            maxReserve: 300,
+            cost: 120
+        },
+        sniper: {
+            name: 'Sniper Rounds',
+            color: '#8A2BE2',
+            packSize: 5,
+            maxReserve: 30,
+            cost: 200
+        }
+    },
+    
+    // Weapon attachments
+    ATTACHMENTS: [
+        {
+            id: 'extendedMag',
+            name: 'Extended Magazine',
+            description: '+50% ammo capacity',
+            compatibleWeapons: ['pistol', 'assaultRifle', 'smg', 'shotgun'],
+            effect: {
+                property: 'maxAmmo',
+                multiplier: 1.5
+            },
+            rarity: 'common'
+        },
+        {
+            id: 'redDotSight',
+            name: 'Red Dot Sight',
+            description: '-30% bullet spread',
+            compatibleWeapons: ['pistol', 'assaultRifle', 'smg', 'sniperRifle'],
+            effect: {
+                property: 'spread',
+                multiplier: 0.7
+            },
+            rarity: 'common'
+        },
+        {
+            id: 'quickLoader',
+            name: 'Quick Loader',
+            description: '-25% reload time',
+            compatibleWeapons: ['pistol', 'shotgun', 'sniperRifle'],
+            effect: {
+                property: 'reloadTime',
+                multiplier: 0.75
+            },
+            rarity: 'uncommon'
+        },
+        {
+            id: 'rifledBarrel',
+            name: 'Rifled Barrel',
+            description: '+20% damage',
+            compatibleWeapons: ['shotgun', 'assaultRifle'],
+            effect: {
+                property: 'damage',
+                multiplier: 1.2
+            },
+            rarity: 'uncommon'
+        },
+        {
+            id: 'tacticalGrip',
+            name: 'Tactical Grip',
+            description: '-40% bullet spread, +10% fire rate',
+            compatibleWeapons: ['assaultRifle', 'smg'],
+            effect: [
+                {
+                    property: 'spread',
+                    multiplier: 0.6
+                },
+                {
+                    property: 'fireRate',
+                    multiplier: 0.9 // Lower is faster
+                }
+            ],
+            rarity: 'rare'
+        },
+        {
+            id: 'highPowerScope',
+            name: 'High Power Scope',
+            description: '+30% damage, -60% spread',
+            compatibleWeapons: ['sniperRifle', 'assaultRifle'],
+            effect: [
+                {
+                    property: 'damage',
+                    multiplier: 1.3
+                },
+                {
+                    property: 'spread',
+                    multiplier: 0.4
+                }
+            ],
+            rarity: 'rare'
+        },
+        {
+            id: 'suppressorBarrel',
+            name: 'Suppressor',
+            description: 'Zombies less aware of shots',
+            compatibleWeapons: ['pistol', 'smg', 'sniperRifle'],
+            effect: {
+                property: 'noise',
+                multiplier: 0.3
+            },
+            rarity: 'rare'
+        }
+    ],
+    
+    // Treasure chests
+    TREASURE_CHEST: {
+        RADIUS: 20,
+        COMMON_LOOT: [
+            { type: 'coins', value: [100, 200] },
+            { type: 'ammo', value: [0.5, 1] }, // Multiplier of pack size
+            { type: 'health', value: [20, 40] }
+        ],
+        UNCOMMON_LOOT: [
+            { type: 'coins', value: [200, 400] },
+            { type: 'attachment', rarity: 'common', chance: 0.7 },
+            { type: 'torch', value: 1 }
+        ],
+        RARE_LOOT: [
+            { type: 'coins', value: [300, 600] },
+            { type: 'attachment', rarity: 'uncommon', chance: 0.6 },
+            { type: 'attachment', rarity: 'rare', chance: 0.3 },
+            { type: 'torch', value: 2 }
+        ]
     },
     
     // XP and leveling
@@ -73,6 +241,13 @@ const CONFIG = {
         damage: 10
     },
     
+    // Section clearing
+    SECTION_INITIAL_ZOMBIES: {
+        MIN: 10,          // Minimum zombies per section
+        BASE_FACTOR: 5,   // Base multiplier for difficulty
+        RANDOM_FACTOR: 3  // Random additional zombies per difficulty level
+    },
+
     // Difficulty scaling with distance
     DIFFICULTY_DISTANCE_MULTIPLIER: 0.5,
     ZOMBIE_DENSITY_BASE: 0.5,
@@ -101,6 +276,11 @@ const CONFIG = {
         coins: {
             radius: 8,
             color: '#FFD700'
+        },
+        torch: {
+            radius: 12,
+            color: '#FFA500',
+            value: 1
         }
     },
     

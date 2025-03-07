@@ -37,6 +37,19 @@ function updateUI() {
     document.getElementById('xpBar').style.width = (player.xp / player.xpToNextLevel * 100) + '%';
     document.getElementById('ammoBar').style.width = (player.weapon.ammo / player.weapon.maxAmmo * 100) + '%';
     
+    // Update territory and torch counts if elements exist
+    if (document.getElementById('territories')) {
+        document.getElementById('territories').textContent = player.territoriesClaimed;
+    }
+    
+    if (document.getElementById('torches')) {
+        document.getElementById('torches').textContent = player.torchCount;
+    }
+    
+    if (document.getElementById('sectionsCleared')) {
+        document.getElementById('sectionsCleared').textContent = player.sectionCleared;
+    }
+    
     // Update shop coin displays
     document.getElementById('shopCoins').textContent = formatNumber(player.coins);
     document.getElementById('weaponUpgradeCoins').textContent = formatNumber(player.coins);
@@ -94,7 +107,7 @@ function populateWeaponOptions() {
             <p>${weaponData.description}</p>
             <p>Damage: ${weaponData.damage}</p>
             <p>Fire Rate: ${(1000 / weaponData.fireRate).toFixed(1)} shots/sec</p>
-            <p>Ammo: ${weaponData.maxAmmo}</p>
+            <p>Ammo: ${weaponData.maxAmmo} (${CONFIG.AMMO_TYPES[weaponData.ammoType].name})</p>
             <div class="item-cost">
                 <span class="cost-value">${formatNumber(weaponData.cost)} coins</span>
                 <button class="buy-weapon" data-id="${weaponData.id}" ${
@@ -114,18 +127,114 @@ function populateWeaponOptions() {
                 closeShop();
             } else if (player.coins >= weaponData.cost) {
                 // Buy and equip the weapon
-                player.coins -= weaponData.cost;
-                weaponData.unlocked = true;
-                switchWeapon(weaponData.id);
-                updateUI();
-                closeShop();
-                
-                showGameMessage(`Purchased ${weaponData.name}!`);
+                if (purchaseWeapon(weaponData.id)) {
+                    switchWeapon(weaponData.id);
+                    updateUI();
+                    closeShop();
+                    
+                    showGameMessage(`Purchased ${weaponData.name}!`);
+                }
             }
         });
         
         weaponOptions.appendChild(weaponElement);
     });
+    
+    // Add ammunition purchase options
+    const ammoSection = document.createElement('div');
+    ammoSection.className = 'shop-section';
+    ammoSection.innerHTML = '<h3>Ammunition</h3>';
+    
+    // Add each ammo type
+    for (const ammoType in CONFIG.AMMO_TYPES) {
+        const ammoConfig = CONFIG.AMMO_TYPES[ammoType];
+        
+        // Check if player has a weapon that uses this ammo
+        const weaponUsingThisAmmo = WEAPONS.find(w => w.ammoType === ammoType && w.unlocked);
+        if (!weaponUsingThisAmmo) continue;
+        
+        const ammoElement = document.createElement('div');
+        ammoElement.className = 'shop-item';
+        
+        // Calculate how many packs to reach max
+        const currentReserve = player.ammunition[ammoType].reserve;
+        const maxReserve = ammoConfig.maxReserve;
+        const packSize = ammoConfig.packSize;
+        const packsToMax = Math.ceil((maxReserve - currentReserve) / packSize);
+        
+        // Create ammo item
+        ammoElement.innerHTML = `
+            <h3>${ammoConfig.name}</h3>
+            <p>${weaponUsingThisAmmo.name} Ammunition</p>
+            <p>Pack size: ${packSize} rounds</p>
+            <p>Reserve: ${currentReserve}/${maxReserve}</p>
+            <div class="item-cost">
+                <span class="cost-value">${formatNumber(ammoConfig.cost)} coins</span>
+                <button class="buy-ammo" data-type="${ammoType}" ${
+                    (currentReserve >= maxReserve || player.coins < ammoConfig.cost) ? 'disabled' : ''
+                }>
+                    ${currentReserve >= maxReserve ? 'Max' : 'Buy'}
+                </button>
+            </div>
+        `;
+        
+        // Add event listener
+        const buyButton = ammoElement.querySelector('.buy-ammo');
+        if (!buyButton.disabled) {
+            buyButton.addEventListener('click', () => {
+                if (purchaseAmmunition(ammoType)) {
+                    updateUI();
+                    
+                    // Refresh ammo options
+                    populateWeaponOptions();
+                    
+                    showGameMessage(`Purchased ${packSize} ${ammoConfig.name}!`);
+                }
+            });
+        }
+        
+        ammoSection.appendChild(ammoElement);
+    }
+    
+    // Add torch purchase option
+    const torchElement = document.createElement('div');
+    torchElement.className = 'shop-item';
+    
+    const torchCost = CONFIG.TERRITORY.TORCH_COST;
+    
+    torchElement.innerHTML = `
+        <h3>Territory Torch</h3>
+        <p>Used to claim territory after clearing zombies from a section</p>
+        <p>Current: ${player.torchCount}</p>
+        <div class="item-cost">
+            <span class="cost-value">${formatNumber(torchCost)} coins</span>
+            <button class="buy-torch" ${player.coins < torchCost ? 'disabled' : ''}>
+                Buy
+            </button>
+        </div>
+    `;
+    
+    // Add event listener for torch purchase
+    const torchButton = torchElement.querySelector('.buy-torch');
+    if (!torchButton.disabled) {
+        torchButton.addEventListener('click', () => {
+            if (player.coins >= torchCost) {
+                // Purchase torch
+                player.coins -= torchCost;
+                addTorches(1);
+                
+                updateUI();
+                
+                // Refresh torch option
+                populateWeaponOptions();
+                
+                showGameMessage(`Purchased 1 Territory Torch!`);
+            }
+        });
+    }
+    
+    ammoSection.appendChild(torchElement);
+    weaponOptions.appendChild(ammoSection);
     
     // If no weapons to show
     if (weaponOptions.children.length === 0) {
@@ -176,12 +285,92 @@ function populateUpgradeOptions() {
         
         upgradeOptions.appendChild(upgradeElement);
     });
+    
+    // Add territory upgrades section
+    const territorySection = document.createElement('div');
+    territorySection.className = 'shop-section';
+    territorySection.innerHTML = '<h3>Territory System</h3>';
+    
+    // Add territory stats
+    const territoryStatsElement = document.createElement('div');
+    territoryStatsElement.className = 'shop-item';
+    territoryStatsElement.innerHTML = `
+        <h3>Territory Stats</h3>
+        <p>Territories Claimed: ${player.territoriesClaimed}</p>
+        <p>Sections Cleared: ${player.sectionCleared}</p>
+        <p>Health Regen: ${CONFIG.TERRITORY.HEALTH_REGEN}/s</p>
+        <p>Damage Boost: +${((CONFIG.TERRITORY.DAMAGE_BOOST - 1) * 100).toFixed(0)}%</p>
+    `;
+    
+    territorySection.appendChild(territoryStatsElement);
+    upgradeOptions.appendChild(territorySection);
 }
 
 // Populate equipment options in the shop
 function populateEquipmentOptions() {
     const equipmentOptions = document.getElementById('equipmentOptions');
-    equipmentOptions.innerHTML = '<p>Equipment will be available in future updates.</p>';
+    equipmentOptions.innerHTML = '';
+    
+    // Add weapon attachment info and management
+    const attachmentSection = document.createElement('div');
+    attachmentSection.className = 'shop-section';
+    attachmentSection.innerHTML = '<h3>Weapon Attachments</h3>';
+    
+    // Display current weapon's attachments
+    const currentWeapon = getWeaponById(player.activeWeaponId);
+    
+    const weaponElement = document.createElement('div');
+    weaponElement.className = 'shop-item';
+    
+    let attachmentsHTML = '';
+    if (currentWeapon.attachments && currentWeapon.attachments.length > 0) {
+        attachmentsHTML = '<ul class="attachment-list">';
+        
+        for (const attachmentId of currentWeapon.attachments) {
+            const attachment = CONFIG.ATTACHMENTS.find(a => a.id === attachmentId);
+            if (attachment) {
+                attachmentsHTML += `
+                    <li>
+                        ${attachment.name} - ${attachment.description}
+                        <button class="remove-attachment" data-id="${attachmentId}">Remove</button>
+                    </li>
+                `;
+            }
+        }
+        
+        attachmentsHTML += '</ul>';
+    } else {
+        attachmentsHTML = '<p>No attachments equipped</p>';
+    }
+    
+    weaponElement.innerHTML = `
+        <h3>${currentWeapon.name} Attachments</h3>
+        <p>${currentWeapon.attachments.length}/${currentWeapon.attachmentSlots} slots used</p>
+        ${attachmentsHTML}
+        <p class="attachment-help">Find attachments in treasure chests after clearing sections</p>
+    `;
+    
+    // Add event listeners for remove buttons
+    weaponElement.querySelectorAll('.remove-attachment').forEach(button => {
+        button.addEventListener('click', () => {
+            const attachmentId = button.getAttribute('data-id');
+            if (removeAttachmentFromWeapon(currentWeapon.id, attachmentId)) {
+                // Refresh the equipment tab
+                populateEquipmentOptions();
+                updateUI();
+            }
+        });
+    });
+    
+    attachmentSection.appendChild(weaponElement);
+    equipmentOptions.appendChild(attachmentSection);
+    
+    // Add "Coming soon" section
+    const comingSoonElement = document.createElement('div');
+    comingSoonElement.className = 'shop-item';
+    comingSoonElement.innerHTML = '<p>More equipment options will be available in future updates.</p>';
+    
+    equipmentOptions.appendChild(comingSoonElement);
 }
 
 // Open weapon upgrade menu
@@ -268,6 +457,20 @@ function populateWeaponUpgradeOptions() {
         
         weaponUpgradeOptions.appendChild(upgradeElement);
     });
+    
+    // Add current weapon stats
+    const statsElement = document.createElement('div');
+    statsElement.className = 'weapon-stats';
+    
+    // Get stats description
+    const statsDescription = getWeaponStatsDescription(currentWeapon);
+    
+    statsElement.innerHTML = `
+        <h3>Current Stats</h3>
+        <pre>${statsDescription}</pre>
+    `;
+    
+    weaponUpgradeOptions.appendChild(statsElement);
 }
 
 // Show level up menu
@@ -339,6 +542,17 @@ function gameOver() {
     document.getElementById('finalLevel').textContent = player.level;
     document.getElementById('gameOver').style.display = 'flex';
     
+    // Add territory stats
+    const statsElement = document.createElement('p');
+    statsElement.textContent = `Territories claimed: ${player.territoriesClaimed} | Sections cleared: ${player.sectionCleared}`;
+    
+    // Add to game over modal if it doesn't already exist
+    const modalContent = document.querySelector('#gameOver .modal-content');
+    if (!modalContent.querySelector('.territory-stats')) {
+        statsElement.className = 'territory-stats';
+        modalContent.insertBefore(statsElement, document.getElementById('restartButton'));
+    }
+    
     // Play game over sound
     // playSound('gameOver');
 }
@@ -363,6 +577,54 @@ function setupShopTabs() {
     });
 }
 
+// Show territory claim confirmation dialog
+function showTerritoryClaimConfirmation(section) {
+    // Create confirmation dialog if it doesn't exist
+    if (!document.getElementById('territoryConfirm')) {
+        const confirmDialog = document.createElement('div');
+        confirmDialog.id = 'territoryConfirm';
+        confirmDialog.className = 'modal';
+        
+        confirmDialog.innerHTML = `
+            <div class="modal-content">
+                <h2>Claim Territory</h2>
+                <p>Do you want to place a torch here? (${player.torchCount} remaining)</p>
+                <p>When you place 4 torches in each corner of a section, you will claim it as territory and gain health regeneration while inside.</p>
+                <div class="button-group">
+                    <button id="confirmTorchButton">Place Torch</button>
+                    <button id="cancelTorchButton">Cancel</button>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('gameContainer').appendChild(confirmDialog);
+        
+        // Add event listeners
+        document.getElementById('confirmTorchButton').addEventListener('click', () => {
+            placeTorch();
+            document.getElementById('territoryConfirm').style.display = 'none';
+            gameRunning = true;
+        });
+        
+        document.getElementById('cancelTorchButton').addEventListener('click', () => {
+            document.getElementById('territoryConfirm').style.display = 'none';
+            gameRunning = true;
+        });
+    }
+    
+    // Update torch count
+    const confirmText = document.querySelector('#territoryConfirm p');
+    if (confirmText) {
+        confirmText.textContent = `Do you want to place a torch here? (${player.torchCount} remaining)`;
+    }
+    
+    // Show the confirmation dialog
+    document.getElementById('territoryConfirm').style.display = 'flex';
+    
+    // Pause the game while confirming
+    gameRunning = false;
+}
+
 // Initialize UI event listeners
 function initUI() {
     // Setup shop tabs
@@ -374,4 +636,40 @@ function initUI() {
     document.getElementById('weaponUpgradeButton').addEventListener('click', openWeaponUpgradeMenu);
     document.getElementById('closeWeaponUpgradeButton').addEventListener('click', closeWeaponUpgradeMenu);
     document.getElementById('restartButton').addEventListener('click', restartGame);
+    
+    // Add territory and torch stats to UI if they don't exist
+    addTerritoryStatsToUI();
+}
+
+// Add territory system stats to the UI
+function addTerritoryStatsToUI() {
+    // Get the stats section
+    const statsSection = document.querySelector('.stats-section');
+    
+    // Check if territory stats already exist
+    if (!document.getElementById('territories')) {
+        // Create territory stats row
+        const territoriesRow = document.createElement('div');
+        territoriesRow.className = 'stat-row';
+        territoriesRow.innerHTML = 'Territories: <span id="territories">0</span>';
+        statsSection.appendChild(territoriesRow);
+    }
+    
+    // Check if torches stat already exists
+    if (!document.getElementById('torches')) {
+        // Create torches stats row
+        const torchesRow = document.createElement('div');
+        torchesRow.className = 'stat-row';
+        torchesRow.innerHTML = 'Torches: <span id="torches">0</span>';
+        statsSection.appendChild(torchesRow);
+    }
+    
+    // Check if sections cleared stat already exists
+    if (!document.getElementById('sectionsCleared')) {
+        // Create sections cleared stats row
+        const clearedRow = document.createElement('div');
+        clearedRow.className = 'stat-row';
+        clearedRow.innerHTML = 'Cleared: <span id="sectionsCleared">0</span>';
+        statsSection.appendChild(clearedRow);
+    }
 }

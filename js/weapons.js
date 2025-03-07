@@ -17,6 +17,9 @@ const WEAPONS = [
         cost: 0,
         unlocked: true,
         color: '#FFD700', // Gold
+        ammoType: 'pistol',
+        attachmentSlots: 2,
+        attachments: [],
         upgrades: {
             damage: 0,
             fireRate: 0,
@@ -43,6 +46,9 @@ const WEAPONS = [
         cost: 1000,
         unlocked: false,
         color: '#FF4500', // OrangeRed
+        ammoType: 'shotgun',
+        attachmentSlots: 2,
+        attachments: [],
         upgrades: {
             damage: 0,
             fireRate: 0,
@@ -68,6 +74,9 @@ const WEAPONS = [
         cost: 2500,
         unlocked: false,
         color: '#32CD32', // LimeGreen
+        ammoType: 'rifle',
+        attachmentSlots: 3,
+        attachments: [],
         upgrades: {
             damage: 0,
             fireRate: 0,
@@ -93,6 +102,9 @@ const WEAPONS = [
         cost: 3500,
         unlocked: false,
         color: '#1E90FF', // DodgerBlue
+        ammoType: 'smg',
+        attachmentSlots: 2,
+        attachments: [],
         upgrades: {
             damage: 0,
             fireRate: 0,
@@ -118,6 +130,9 @@ const WEAPONS = [
         cost: 5000,
         unlocked: false,
         color: '#8A2BE2', // BlueViolet
+        ammoType: 'sniper',
+        attachmentSlots: 3,
+        attachments: [],
         upgrades: {
             damage: 0,
             fireRate: 0,
@@ -158,7 +173,46 @@ function createWeapon(weaponId) {
         weapon.maxAmmo = Math.floor(weapon.maxAmmo);
     }
     
+    // Apply effects from attachments
+    if (weapon.attachments && weapon.attachments.length > 0) {
+        for (const attachmentId of weapon.attachments) {
+            const attachment = CONFIG.ATTACHMENTS.find(a => a.id === attachmentId);
+            
+            if (attachment && attachment.effect) {
+                if (Array.isArray(attachment.effect)) {
+                    // Multiple effects
+                    for (const effect of attachment.effect) {
+                        applyAttachmentEffect(weapon, effect);
+                    }
+                } else {
+                    // Single effect
+                    applyAttachmentEffect(weapon, attachment.effect);
+                }
+            }
+        }
+    }
+    
     return weapon;
+}
+
+// Apply an attachment effect to a weapon
+function applyAttachmentEffect(weapon, effect) {
+    if (effect.property && effect.multiplier) {
+        if (effect.property === 'damage') {
+            weapon.damage *= effect.multiplier;
+        } else if (effect.property === 'spread') {
+            weapon.spread *= effect.multiplier;
+        } else if (effect.property === 'fireRate') {
+            weapon.fireRate *= effect.multiplier;
+        } else if (effect.property === 'reloadTime') {
+            weapon.reloadTime *= effect.multiplier;
+        } else if (effect.property === 'maxAmmo') {
+            weapon.maxAmmo = Math.floor(weapon.maxAmmo * effect.multiplier);
+        } else if (effect.property === 'noise') {
+            // Noise reduction doesn't affect stats directly but is used in other logic
+            weapon.noiseReduction = effect.multiplier;
+        }
+    }
 }
 
 // Calculate effective DPS (damage per second) for a weapon
@@ -189,4 +243,175 @@ function applyWeaponUpgrade(weaponId, upgradeType) {
     // Apply upgrade
     weapon.upgrades[property]++;
     return true;
+}
+
+// Add attachment to weapon
+function addAttachmentToWeapon(weaponId, attachmentId) {
+    const weapon = WEAPONS.find(w => w.id === weaponId);
+    if (!weapon) return false;
+    
+    const attachment = CONFIG.ATTACHMENTS.find(a => a.id === attachmentId);
+    if (!attachment) return false;
+    
+    // Check if attachment is compatible with this weapon
+    if (!attachment.compatibleWeapons.includes(weaponId)) {
+        return false;
+    }
+    
+    // Check if weapon has free attachment slots
+    if (weapon.attachments.length >= weapon.attachmentSlots) {
+        return false;
+    }
+    
+    // Check if weapon already has this attachment
+    if (weapon.attachments.includes(attachmentId)) {
+        return false;
+    }
+    
+    // Add attachment
+    weapon.attachments.push(attachmentId);
+    
+    // If this is the active weapon, recreate it to apply attachment effects
+    if (player.activeWeaponId === weaponId) {
+        player.weapon = createWeapon(weaponId);
+    }
+    
+    return true;
+}
+
+// Remove attachment from weapon
+function removeAttachmentFromWeapon(weaponId, attachmentId) {
+    const weapon = WEAPONS.find(w => w.id === weaponId);
+    if (!weapon) return false;
+    
+    // Check if weapon has this attachment
+    const index = weapon.attachments.indexOf(attachmentId);
+    if (index === -1) {
+        return false;
+    }
+    
+    // Remove attachment
+    weapon.attachments.splice(index, 1);
+    
+    // If this is the active weapon, recreate it to remove attachment effects
+    if (player.activeWeaponId === weaponId) {
+        player.weapon = createWeapon(weaponId);
+    }
+    
+    return true;
+}
+
+// Get weapon by ID
+function getWeaponById(weaponId) {
+    return WEAPONS.find(w => w.id === weaponId);
+}
+
+// Get all unlocked weapons
+function getUnlockedWeapons() {
+    return WEAPONS.filter(w => w.unlocked);
+}
+
+// Purchase a new weapon
+function purchaseWeapon(weaponId) {
+    const weapon = WEAPONS.find(w => w.id === weaponId);
+    
+    if (!weapon || weapon.unlocked || player.coins < weapon.cost) {
+        return false;
+    }
+    
+    // Deduct coins
+    player.coins -= weapon.cost;
+    
+    // Unlock weapon
+    weapon.unlocked = true;
+    
+    // Give some initial ammo
+    const ammoType = weapon.ammoType;
+    if (player.ammunition[ammoType]) {
+        const ammoConfig = CONFIG.AMMO_TYPES[ammoType];
+        // Give one full magazine of ammo (in the gun) plus one magazine in reserve
+        player.ammunition[ammoType].current = weapon.maxAmmo;
+        player.ammunition[ammoType].reserve += weapon.maxAmmo;
+    }
+    
+    return true;
+}
+
+// Purchase ammunition
+function purchaseAmmunition(ammoType) {
+    if (!player.ammunition[ammoType]) return false;
+    
+    const ammoConfig = CONFIG.AMMO_TYPES[ammoType];
+    if (!ammoConfig || player.coins < ammoConfig.cost) {
+        return false;
+    }
+    
+    // Check if already at max reserve
+    if (player.ammunition[ammoType].reserve >= ammoConfig.maxReserve) {
+        return false;
+    }
+    
+    // Deduct coins
+    player.coins -= ammoConfig.cost;
+    
+    // Add ammo
+    player.ammunition[ammoType].reserve = Math.min(
+        player.ammunition[ammoType].reserve + ammoConfig.packSize,
+        ammoConfig.maxReserve
+    );
+    
+    // Update UI
+    updateUI();
+    
+    return true;
+}
+
+// Find compatible attachments for a weapon
+function getCompatibleAttachments(weaponId) {
+    return CONFIG.ATTACHMENTS.filter(attachment => 
+        attachment.compatibleWeapons.includes(weaponId)
+    );
+}
+
+// Find equipped attachment by slot for a weapon
+function getEquippedAttachmentBySlot(weaponId, slotIndex) {
+    const weapon = WEAPONS.find(w => w.id === weaponId);
+    if (!weapon || !weapon.attachments || slotIndex >= weapon.attachments.length) {
+        return null;
+    }
+    
+    return weapon.attachments[slotIndex];
+}
+
+// Get formatted description of all weapon stats
+function getWeaponStatsDescription(weapon) {
+    // Create weapon instance with all upgrades and attachments
+    const weaponInstance = createWeapon(weapon.id);
+    
+    // Calculate DPS
+    const dps = calculateWeaponDPS(weaponInstance);
+    
+    // Format the description
+    let description = `
+        Damage: ${Math.round(weaponInstance.damage)}
+        Fire Rate: ${(1000 / weaponInstance.fireRate).toFixed(1)} shots/sec
+        DPS: ${Math.round(dps)}
+        Ammo: ${weaponInstance.maxAmmo}
+        Reload Time: ${(weaponInstance.reloadTime / 1000).toFixed(1)}s
+        Accuracy: ${Math.round((1 - weaponInstance.spread) * 100)}%
+    `;
+    
+    // Add attachments
+    if (weaponInstance.attachments.length > 0) {
+        description += `\nAttachments (${weaponInstance.attachments.length}/${weaponInstance.attachmentSlots}):`;
+        
+        for (const attachmentId of weaponInstance.attachments) {
+            const attachment = CONFIG.ATTACHMENTS.find(a => a.id === attachmentId);
+            if (attachment) {
+                description += `\n- ${attachment.name}`;
+            }
+        }
+    }
+    
+    return description;
 }

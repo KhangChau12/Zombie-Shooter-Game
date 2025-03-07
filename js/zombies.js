@@ -14,8 +14,14 @@ function spawnZombiesInDiscoveredSections() {
     if (remainingSlots <= 0) return;
     
     mapSections.forEach(section => {
+        // Skip if section is cleared or is territory
+        if (section.isCleared || section.isTerritory) return;
+        
         // If no more room to create zombies, return
         if (zombies.length >= CONFIG.MAX_ZOMBIES_ON_SCREEN) return;
+        
+        // If all section zombies have been spawned and killed, don't spawn more
+        if (section.zombiesRemaining <= 0) return;
         
         // Calculate distance from start
         const sectionCenterX = section.x + CONFIG.SECTION_SIZE / 2;
@@ -77,20 +83,23 @@ function spawnZombiesInDiscoveredSections() {
                 }
                 
                 if (isValid) {
-                    // Number of zombies that can still be spawned
-                    const zombiesToSpawn = Math.min(
-                        remainingSlots, 
-                        Math.min(3, 1 + Math.floor(section.difficulty / 3))
+                    // Number of zombies that can still be spawned for this section
+                    const maxZombiesToSpawn = Math.min(
+                        remainingSlots,
+                        Math.min(3, 1 + Math.floor(section.difficulty / 3)),
+                        section.zombiesRemaining
                     );
                     
                     let spawnCount = 0;
-                    for (let i = 0; i < zombiesToSpawn; i++) {
+                    for (let i = 0; i < maxZombiesToSpawn; i++) {
                         if (zombies.length < CONFIG.MAX_ZOMBIES_ON_SCREEN && 
                             (i === 0 || Math.random() < 0.7)) { // 70% chance to spawn more
-                            spawnZombie(
+                            spawnSectionZombie(
                                 spawnX + (Math.random() - 0.5) * 50, 
                                 spawnY + (Math.random() - 0.5) * 50, 
-                                section.difficulty
+                                section.difficulty,
+                                sectionX,
+                                sectionY
                             );
                             spawnCount++;
                         }
@@ -98,6 +107,86 @@ function spawnZombiesInDiscoveredSections() {
                 }
             }
         }
+    });
+}
+
+// Spawn a zombie specifically for section clearing
+function spawnSectionZombie(x, y, difficulty, sectionX, sectionY) {
+    // Determine zombie type based on difficulty and randomness
+    let zombieType;
+    const rand = Math.random();
+    
+    // Higher difficulty increases chance of special zombies
+    if (rand < 0.05 * difficulty && difficulty > 3) {
+        zombieType = 'boss';
+    } else if (rand < 0.2 + difficulty * 0.05 && difficulty > 2) {
+        zombieType = 'fast';
+    } else if (rand < 0.35 + difficulty * 0.05 && difficulty > 3) {
+        zombieType = 'tank';
+    } else {
+        zombieType = 'regular';
+    }
+    
+    // Get zombie type config
+    const zombieConfig = CONFIG.ZOMBIE_TYPES[zombieType];
+    
+    // Calculate base stats scaled by difficulty
+    const baseHealth = CONFIG.ZOMBIE_BASE_STATS.health + (difficulty - 1) * 25;
+    const baseSpeed = CONFIG.ZOMBIE_BASE_STATS.speed + Math.min(difficulty * 0.15, 3);
+    const baseDamage = CONFIG.ZOMBIE_BASE_STATS.damage + difficulty * 2;
+    
+    // Apply type multipliers
+    const health = baseHealth * zombieConfig.healthMultiplier;
+    const speed = baseSpeed * zombieConfig.speedMultiplier;
+    const damage = baseDamage * zombieConfig.damageMultiplier;
+    
+    // Calculate XP and coins based on difficulty and type
+    const xpValue = Math.floor(10 * zombieConfig.xpMultiplier * (1 + (difficulty - 1) * 0.2));
+    const coinValue = Math.floor(10 * zombieConfig.coinMultiplier * (1 + (difficulty - 1) * 0.2));
+    
+    // Create the zombie with section clearing flags
+    zombies.push({
+        x: x,
+        y: y,
+        speed: speed,
+        radius: zombieConfig.radius,
+        health: health,
+        maxHealth: health,
+        damage: damage,
+        type: zombieType,
+        coins: coinValue,
+        xp: xpValue,
+        lastMoveAttempt: 0,
+        color: zombieConfig.color,
+        
+        // Add section clearing properties
+        isSectionZombie: true,
+        sectionX: sectionX,
+        sectionY: sectionY,
+        
+        // Territory effects
+        inTerritory: false,
+        territoryDamageTime: 0,
+        
+        // Visual effects
+        lastDamageTime: 0,
+        damageFlashDuration: 200, // ms
+        
+        // Behavior
+        targetX: player.x,
+        targetY: player.y,
+        pathUpdateTime: 0,
+        pathUpdateInterval: 500 + Math.random() * 500, // Random interval to avoid all zombies updating at once
+        
+        // Movement vectors
+        moveX: 0,
+        moveY: 0,
+        
+        // Animations
+        animationFrame: 0,
+        animationTime: 0,
+        animationSpeed: 0.2 + Math.random() * 0.1, // Slight variation in animation speed
+        spawnTime: performance.now()
     });
 }
 
@@ -139,6 +228,10 @@ function spawnZombie(x, y, difficulty) {
     const xpValue = Math.floor(10 * zombieConfig.xpMultiplier * (1 + (difficulty - 1) * 0.2));
     const coinValue = Math.floor(10 * zombieConfig.coinMultiplier * (1 + (difficulty - 1) * 0.2));
     
+    // Get section coordinates
+    const sectionX = Math.floor(x / CONFIG.SECTION_SIZE);
+    const sectionY = Math.floor(y / CONFIG.SECTION_SIZE);
+    
     // Create the zombie
     zombies.push({
         x: x,
@@ -153,6 +246,15 @@ function spawnZombie(x, y, difficulty) {
         xp: xpValue,
         lastMoveAttempt: 0,
         color: zombieConfig.color,
+        
+        // Not a section zombie (won't count for clearing)
+        isSectionZombie: false,
+        sectionX: sectionX,
+        sectionY: sectionY,
+        
+        // Territory effects
+        inTerritory: false,
+        territoryDamageTime: 0,
         
         // Visual effects
         lastDamageTime: 0,
@@ -186,8 +288,92 @@ function updateZombies(deltaTime) {
         // Check if zombie is too far outside screen, remove to save resources
         if (zombie.x < cameraX - 1500 || zombie.x > cameraX + canvas.width + 1500 ||
             zombie.y < cameraY - 1500 || zombie.y > cameraY + canvas.height + 1500) {
+            
+            // If this is a section zombie, update the section's zombie count
+            if (zombie.isSectionZombie) {
+                // Find the section this zombie belongs to
+                const section = mapSections.find(s => 
+                    Math.floor(s.x / CONFIG.SECTION_SIZE) === zombie.sectionX && 
+                    Math.floor(s.y / CONFIG.SECTION_SIZE) === zombie.sectionY
+                );
+                
+                // If section is not cleared, decrease zombie count
+                if (section && !section.isCleared) {
+                    section.zombiesRemaining--;
+                    
+                    // Check if section is now cleared
+                    if (section.zombiesRemaining <= 0) {
+                        sectionCleared(section);
+                    }
+                }
+            }
+            
             zombies.splice(i, 1);
             continue;
+        }
+        
+        // Check if zombie is in a territory
+        const zombieSectionX = Math.floor(zombie.x / CONFIG.SECTION_SIZE);
+        const zombieSectionY = Math.floor(zombie.y / CONFIG.SECTION_SIZE);
+        
+        // Find the section
+        const section = mapSections.find(s => 
+            Math.floor(s.x / CONFIG.SECTION_SIZE) === zombieSectionX && 
+            Math.floor(s.y / CONFIG.SECTION_SIZE) === zombieSectionY
+        );
+        
+        // Apply territory effects
+        const wasInTerritory = zombie.inTerritory;
+        zombie.inTerritory = false;
+        
+        if (section && section.isTerritory) {
+            zombie.inTerritory = true;
+            
+            // Apply damage over time in territory
+            if (currentTime - zombie.territoryDamageTime > 1000) { // Every second
+                zombie.territoryDamageTime = currentTime;
+                
+                // Apply territory damage
+                const territoryDamage = CONFIG.TERRITORY.ZOMBIE_DAMAGE;
+                damageZombie(zombie, territoryDamage);
+                
+                // Create visual effect
+                createEffect(
+                    zombie.x, 
+                    zombie.y, 
+                    zombie.radius, 
+                    0.3, 
+                    'territoryDamage'
+                );
+            }
+        }
+        
+        // Check if in home radius for stronger effects
+        const distanceFromHome = Math.sqrt(
+            Math.pow(zombie.x - player.startX, 2) + 
+            Math.pow(zombie.y - player.startY, 2)
+        );
+        
+        if (distanceFromHome <= CONFIG.TERRITORY.HOME_RADIUS) {
+            zombie.inTerritory = true;
+            
+            // Apply stronger damage over time near home
+            if (currentTime - zombie.territoryDamageTime > 500) { // Twice per second
+                zombie.territoryDamageTime = currentTime;
+                
+                // Apply boosted territory damage
+                const homeDamage = CONFIG.TERRITORY.ZOMBIE_DAMAGE * CONFIG.TERRITORY.HOME_BONUS_MULTIPLIER;
+                damageZombie(zombie, homeDamage);
+                
+                // Create stronger visual effect
+                createEffect(
+                    zombie.x, 
+                    zombie.y, 
+                    zombie.radius * 1.5, 
+                    0.3, 
+                    'homeDamage'
+                );
+            }
         }
         
         // Update zombie target
@@ -282,22 +468,15 @@ function updateZombies(deltaTime) {
                     speedMultiplier = 1.5; // Speed burst
                 }
                 
-                // QUAN TRỌNG: Đây là dòng bị lỗi, sửa lại cách di chuyển
-                // Loại bỏ deltaTime và sử dụng tốc độ cố định
+                // Apply territory slow effect
+                if (zombie.inTerritory) {
+                    speedMultiplier *= CONFIG.TERRITORY.ZOMBIE_SLOW;
+                }
+                
+                // Use fixed speed movement
                 const moveSpeed = zombie.speed * speedMultiplier * 0.05;
                 zombie.x += zombie.moveX * moveSpeed;
                 zombie.y += zombie.moveY * moveSpeed;
-                
-                // Thêm log để debug
-                if (i === 0 && zombies.length > 0 && Math.random() < 0.01) {
-                    console.log("Zombie moving:", 
-                        "x:", zombie.x.toFixed(2), 
-                        "y:", zombie.y.toFixed(2), 
-                        "speed:", moveSpeed.toFixed(2),
-                        "moveX:", zombie.moveX.toFixed(2),
-                        "moveY:", zombie.moveY.toFixed(2)
-                    );
-                }
             }
         }
         
@@ -327,13 +506,34 @@ function drawZombies() {
             const currentTime = performance.now();
             const inDamageFlash = (currentTime - zombie.lastDamageTime < zombie.damageFlashDuration);
             
+            // Draw zombie shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(screenX, screenY + zombie.radius - 5, zombie.radius * 0.8, zombie.radius * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
             // Draw zombie body
             ctx.beginPath();
             ctx.arc(screenX, screenY, zombie.radius, 0, Math.PI * 2);
             
-            // Use damage flash color or normal color
+            // Use damage flash color, territory effect color, or normal color
             if (inDamageFlash) {
                 ctx.fillStyle = '#FFFFFF';
+            } else if (zombie.inTerritory) {
+                // Territory effect - add a pulsing green tint
+                const pulseRate = Math.sin(currentTime / 200) * 0.3 + 0.7;
+                
+                // Mix the zombie's color with territory color
+                const baseColor = hexToRgb(zombie.color);
+                const territoryColor = { r: 0, g: 255, b: 100 };
+                
+                const mixedColor = {
+                    r: Math.floor(baseColor.r * 0.7 + territoryColor.r * 0.3 * pulseRate),
+                    g: Math.floor(baseColor.g * 0.7 + territoryColor.g * 0.3 * pulseRate),
+                    b: Math.floor(baseColor.b * 0.7 + territoryColor.b * 0.3 * pulseRate)
+                };
+                
+                ctx.fillStyle = `rgb(${mixedColor.r}, ${mixedColor.g}, ${mixedColor.b})`;
             } else {
                 ctx.fillStyle = zombie.color;
             }
@@ -365,8 +565,43 @@ function drawZombies() {
             
             ctx.fillStyle = healthPercentage > 0.5 ? '#0F0' : healthPercentage > 0.25 ? '#FF0' : '#F00';
             ctx.fillRect(screenX - barWidth / 2, screenY - zombie.radius - 10, barWidth * healthPercentage, barHeight);
+            
+            // Mark section zombies with a small indicator
+            if (zombie.isSectionZombie) {
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath();
+                ctx.arc(screenX, screenY - zombie.radius - 15, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Show territory effect
+            if (zombie.inTerritory) {
+                const pulseSize = 1 + Math.sin(currentTime / 300) * 0.2;
+                
+                // Draw territory damage effect
+                ctx.strokeStyle = 'rgba(0, 255, 100, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, zombie.radius * 1.2 * pulseSize, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
         }
     }
+}
+
+// Convert hex color to RGB object
+function hexToRgb(hex) {
+    // Remove # if present
+    hex = hex.replace('#', '');
+    
+    // Parse RGB values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    return { r, g, b };
 }
 
 // Draw details for different zombie types
@@ -486,6 +721,11 @@ function damageZombie(zombie, damage) {
 
 // Handle zombie death
 function killZombie(zombie) {
+    // Check if this is a section zombie and update section progress
+    if (zombie.isSectionZombie) {
+        markZombieKilled(zombie);
+    }
+    
     // Add pickup drop chance based on zombie type
     let dropChance = 0.1;
     if (zombie.type === 'boss') dropChance = 1.0; // Bosses always drop something
@@ -498,7 +738,8 @@ function killZombie(zombie) {
         
         if (rand < 0.4) pickupType = 'health';
         else if (rand < 0.7) pickupType = 'ammo';
-        else pickupType = 'armor';
+        else if (rand < 0.9) pickupType = 'armor';
+        else pickupType = 'torch';
         
         createPickup(zombie.x, zombie.y, pickupType);
     }
@@ -536,4 +777,20 @@ function killZombie(zombie) {
     
     // Update UI
     updateUI();
+}
+
+// Create a floating text indicator
+function createFloatingText(x, y, text, color = '#FFFFFF', duration = 1) {
+    createEffect(
+        x,
+        y,
+        10, // Not used for text, just a placeholder
+        duration,
+        'floatingText',
+        {
+            text: text,
+            color: color,
+            dy: -30 // Float upward
+        }
+    );
 }

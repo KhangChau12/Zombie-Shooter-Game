@@ -20,7 +20,14 @@ const keys = {
     r: false,
     space: false,
     e: false,
-    tab: false
+    tab: false,
+    q: false,  // Quick switch to previous weapon
+    f: false,  // Use/Place torch
+    
+    // Number keys for weapon selection
+    '1': false,
+    '2': false,
+    '3': false
 };
 
 let mouseX = 0;
@@ -61,7 +68,9 @@ function createEffect(x, y, radius, duration, type, options = {}) {
         type: type,
         color: options.color,
         dx: options.dx ?? 0,
-        dy: options.dy ?? 0
+        dy: options.dy ?? 0,
+        text: options.text ?? '',
+        rotation: options.rotation ?? 0
     });
 }
 
@@ -199,6 +208,240 @@ function generateId() {
     return Math.random().toString(36).substring(2, 15);
 }
 
+// Draw a dashed line
+function drawDashedLine(fromX, fromY, toX, toY, dashSize = 5, gapSize = 5) {
+    ctx.beginPath();
+    
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const dashCount = Math.floor(distance / (dashSize + gapSize));
+    
+    const unitX = dx / distance;
+    const unitY = dy / distance;
+    
+    let x = fromX;
+    let y = fromY;
+    
+    ctx.moveTo(fromX, fromY);
+    
+    for (let i = 0; i < dashCount; i++) {
+        x += unitX * dashSize;
+        y += unitY * dashSize;
+        ctx.lineTo(x, y);
+        
+        x += unitX * gapSize;
+        y += unitY * gapSize;
+        ctx.moveTo(x, y);
+    }
+    
+    ctx.stroke();
+}
+
+// Update visual effects
+function updateEffects(deltaTime) {
+    for (let i = effects.length - 1; i >= 0; i--) {
+        const effect = effects[i];
+        
+        // Update lifetime
+        effect.timeAlive += deltaTime;
+        
+        // Remove effects that have expired
+        if (effect.timeAlive >= effect.duration) {
+            effects.splice(i, 1);
+            continue;
+        }
+        
+        // Update position for moving effects
+        if (effect.dx || effect.dy) {
+            effect.x += effect.dx * deltaTime;
+            effect.y += effect.dy * deltaTime;
+        }
+        
+        // Special updates for specific effect types
+        if (effect.type === 'floatingText') {
+            // Make text float upward slower over time
+            effect.dy = -30 * (1 - effect.timeAlive / effect.duration);
+        } else if (effect.type === 'treasureParticle') {
+            // Add gravity to particles
+            effect.dy += 50 * deltaTime;
+        }
+    }
+}
+
+// Draw visual effects
+function drawEffects() {
+    for (let i = 0; i < effects.length; i++) {
+        const effect = effects[i];
+        
+        // Convert to screen coordinates
+        const screenX = effect.x - cameraX;
+        const screenY = effect.y - cameraY;
+        
+        // Only draw if on screen (with padding)
+        if (screenX >= -50 && screenX <= canvas.width + 50 &&
+            screenY >= -50 && screenY <= canvas.height + 50) {
+            
+            const progress = effect.timeAlive / effect.duration;
+            
+            if (effect.type === 'muzzleFlash') {
+                effect.opacity = 1 - progress;
+                
+                ctx.fillStyle = effect.color || `rgba(255, 200, 0, ${effect.opacity})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * (1 - progress), 0, Math.PI * 2);
+                ctx.fill();
+            } else if (effect.type === 'blood') {
+                effect.opacity = 1 - progress;
+                
+                ctx.fillStyle = `rgba(255, 0, 0, ${effect.opacity})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * (1 - progress * 0.5), 0, Math.PI * 2);
+                ctx.fill();
+            } else if (effect.type === 'levelUp') {
+                // Level up circular wave effect
+                ctx.strokeStyle = `rgba(0, 255, 100, ${1 - progress})`;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * progress * 3, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Second wave
+                ctx.strokeStyle = `rgba(0, 200, 255, ${1 - progress})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * progress * 2, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Inner glow
+                ctx.fillStyle = `rgba(255, 255, 255, ${1 - progress})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * (1 - progress * 0.5), 0, Math.PI * 2);
+                ctx.fill();
+            } else if (effect.type === 'critText') {
+                // Critical hit text indicator
+                ctx.font = `${20 - progress * 5}px Orbitron`;
+                ctx.fillStyle = `rgba(255, 50, 0, ${1 - progress})`;
+                ctx.textAlign = 'center';
+                ctx.fillText('CRITICAL!', screenX, screenY - 10 - progress * 20);
+            } else if (effect.type === 'sectionClear') {
+                // Section clear wave effect
+                ctx.strokeStyle = `rgba(0, 200, 255, ${0.7 - progress * 0.7})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * progress * 2, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Add inner pulse
+                ctx.fillStyle = `rgba(0, 200, 255, ${0.3 - progress * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * progress, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (effect.type === 'territoryClaim') {
+                // Territory claim effect - expanding circle with pulse
+                const pulseIntensity = Math.sin(progress * Math.PI * 6) * (1 - progress) * 0.3 + 0.7;
+                
+                ctx.strokeStyle = `rgba(0, 255, 100, ${pulseIntensity - progress * 0.7})`;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * progress * 2, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Inner fill
+                ctx.fillStyle = `rgba(0, 255, 100, ${0.2 - progress * 0.2})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * progress * 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (effect.type === 'torch') {
+                // Torch effect - persistent flame
+                const time = performance.now() / 200;
+                const flameHeight = 10 + Math.sin(time) * 3;
+                
+                // Draw torch stick
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(screenX - 2, screenY, 4, 15);
+                
+                // Draw torch head
+                ctx.fillStyle = '#A0522D';
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw flame
+                const gradient = ctx.createRadialGradient(
+                    screenX, screenY - 5, 2,
+                    screenX, screenY - 5, flameHeight
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 0, 0.9)');
+                gradient.addColorStop(0.4, 'rgba(255, 165, 0, 0.7)');
+                gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY - 5, flameHeight, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Light radius
+                ctx.fillStyle = `rgba(255, 200, 0, ${0.05 + Math.sin(time) * 0.02})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, CONFIG.TERRITORY.TORCH_LIGHT_RADIUS * (0.8 + Math.sin(time * 0.5) * 0.2), 0, Math.PI * 2);
+                ctx.fill();
+            } else if (effect.type === 'torchActivate') {
+                // Torch activation pulse
+                ctx.fillStyle = `rgba(255, 200, 0, ${0.5 - progress * 0.5})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * progress, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (effect.type === 'territoryDamage') {
+                // Territory damage effect on zombies
+                ctx.strokeStyle = `rgba(0, 255, 100, ${1 - progress})`;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * (1 + progress), 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            } else if (effect.type === 'homeDamage') {
+                // Home zone damage effect on zombies - stronger
+                ctx.strokeStyle = `rgba(255, 215, 0, ${1 - progress})`;
+                ctx.lineWidth = 3;
+                ctx.setLineDash([2, 2]);
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * (1 + progress), 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Inner glow
+                ctx.fillStyle = `rgba(255, 215, 0, ${0.3 - progress * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * (1 + progress * 0.5), 0, Math.PI * 2);
+                ctx.fill();
+            } else if (effect.type === 'treasureChest') {
+                // Persistent treasure chest
+                drawTreasureChest(screenX, screenY);
+            } else if (effect.type === 'treasureOpen') {
+                // Treasure chest opening effect
+                ctx.fillStyle = `rgba(255, 215, 0, ${0.5 - progress * 0.5})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * progress, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (effect.type === 'treasureParticle') {
+                // Treasure particle (flying gold/items)
+                ctx.fillStyle = effect.color || '#FFD700';
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, 4 * (1 - progress), 0, Math.PI * 2);
+                ctx.fill();
+            } else if (effect.type === 'floatingText') {
+                // Floating text effect
+                ctx.font = `${16 * (1 - progress * 0.5)}px Orbitron`;
+                ctx.fillStyle = effect.color || `rgba(255, 255, 255, ${1 - progress})`;
+                ctx.textAlign = 'center';
+                ctx.fillText(effect.text, screenX, screenY);
+            }
+        }
+    }
+}
+
 // Load the game with a simple loading screen
 function loadGame() {
     // Create loading screen
@@ -255,6 +498,32 @@ function handleKeyDown(e) {
             e.preventDefault(); // Prevent tab from changing focus
             if (gameRunning) openWeaponUpgradeMenu();
             break;
+        case 'q':
+            keys.q = true;
+            if (gameRunning) switchToPreviousWeapon();
+            break;
+        case 'f':
+            keys.f = true;
+            if (gameRunning) placeTorch();
+            break;
+        case '1':
+            keys['1'] = true;
+            if (gameRunning && player.equippedWeapons.length > 0) {
+                switchWeapon(player.equippedWeapons[0]);
+            }
+            break;
+        case '2':
+            keys['2'] = true;
+            if (gameRunning && player.equippedWeapons.length > 1) {
+                switchWeapon(player.equippedWeapons[1]);
+            }
+            break;
+        case '3':
+            keys['3'] = true;
+            if (gameRunning && player.equippedWeapons.length > 2) {
+                switchWeapon(player.equippedWeapons[2]);
+            }
+            break;
     }
 }
 
@@ -268,6 +537,11 @@ function handleKeyUp(e) {
         case ' ': keys.space = false; break;
         case 'e': keys.e = false; break;
         case 'tab': keys.tab = false; break;
+        case 'q': keys.q = false; break;
+        case 'f': keys.f = false; break;
+        case '1': keys['1'] = false; break;
+        case '2': keys['2'] = false; break;
+        case '3': keys['3'] = false; break;
     }
 }
 
@@ -289,6 +563,22 @@ function handleMouseDown(e) {
 
 function handleMouseUp(e) {
     mouseDown = false;
+}
+
+function handleMouseWheel(e) {
+    // Scroll through weapons
+    if (gameRunning) {
+        if (e.deltaY < 0) {
+            // Scroll up - previous weapon
+            switchToPreviousWeapon();
+        } else {
+            // Scroll down - next weapon
+            switchToNextWeapon();
+        }
+    }
+    
+    // Prevent default scrolling
+    e.preventDefault();
 }
 
 function handleResize() {
@@ -330,8 +620,11 @@ function checkCollisions() {
                     bullet.y, 
                     15, // Radius
                     0.7, // Duration
-                    'critText', 
-                    { text: bullet.damage.toFixed(0) }
+                    'floatingText', 
+                    { 
+                        text: bullet.damage.toFixed(0),
+                        color: bullet.isCritical ? '#FF4500' : '#FFFFFF'
+                    }
                 );
                 
                 // Remove bullet
@@ -364,9 +657,71 @@ function checkCollisions() {
             zombie.y -= dy * 0.1;
         }
     }
+    
+    // Check player-pickup collisions
+    for (let i = pickups.length - 1; i >= 0; i--) {
+        const pickup = pickups[i];
+        
+        const dx = player.x - pickup.x;
+        const dy = player.y - pickup.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < player.radius + pickup.radius) {
+            // Player collected the pickup
+            if (pickup.type === 'health') {
+                player.health = Math.min(player.health + pickup.value, player.maxHealth);
+                showGameMessage("+20 Health");
+            } else if (pickup.type === 'ammo') {
+                // Add ammo to current weapon's reserves
+                if (player.weapon && player.weapon.ammoType) {
+                    const ammoType = player.weapon.ammoType;
+                    const packSize = CONFIG.AMMO_TYPES[ammoType].packSize;
+                    
+                    addAmmunition(ammoType, packSize);
+                    showGameMessage(`+${packSize} ${CONFIG.AMMO_TYPES[ammoType].name}`);
+                }
+            } else if (pickup.type === 'coins') {
+                player.coins += pickup.value;
+                showGameMessage(`+${pickup.value} Coins`);
+            } else if (pickup.type === 'armor') {
+                player.armor = Math.min(player.armor + pickup.value, player.maxArmor);
+                showGameMessage("+15 Armor");
+            } else if (pickup.type === 'torch') {
+                addTorches(pickup.value);
+                showGameMessage(`+${pickup.value} Torch${pickup.value > 1 ? 'es' : ''}`);
+            }
+            
+            // Add pickup effect
+            createEffect(
+                pickup.x,
+                pickup.y,
+                20,
+                0.3,
+                'pickup'
+            );
+            
+            // Remove pickup
+            pickups.splice(i, 1);
+            
+            // Update UI
+            updateUI();
+        }
+    }
+    
+    // Check for treasure chest interactions
+    checkTreasureChestInteraction();
 }
 
-// Đảm bảo hàm restartGame được định nghĩa
+// Check all territory effects
+function checkAllTerritoryEffects() {
+    // First check player's territory status
+    checkTerritoryEffects();
+    
+    // Check zombies in territory (damage over time, etc)
+    // This is now handled in updateZombies()
+}
+
+// Restart the game
 function restartGame() {
     // Reset game state
     zombies.length = 0;
@@ -374,12 +729,12 @@ function restartGame() {
     effects.length = 0;
     pickups.length = 0;
     
-    // Khởi tạo lại player và các thành phần game
+    // Initialize player and game components
     initGame();
     
-    // Ẩn màn hình game over
+    // Hide game over screen
     document.getElementById('gameOver').style.display = 'none';
     
-    // Kích hoạt game
+    // Start the game
     gameRunning = true;
 }

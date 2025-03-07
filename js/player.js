@@ -31,9 +31,29 @@ const player = {
     critChance: CONFIG.PLAYER_START_STATS.critChance,
     critMultiplier: CONFIG.PLAYER_START_STATS.critMultiplier,
     
+    // Weapon system enhancements
+    equippedWeapons: [], // Array of weapon IDs that are equipped
+    activeWeaponIndex: 0, // Index of currently active weapon in equippedWeapons
+
     // Current active weapon
     activeWeaponId: 'pistol',
     weapon: null, // Will be populated with actual weapon object
+    
+    // Ammunition system
+    ammunition: {}, // Will be populated with ammo for each weapon type
+    
+    // Territory system
+    torchCount: CONFIG.TERRITORY.TORCH_INITIAL,
+    inTerritory: false,
+    inHomeRadius: false,
+    territoryBonus: {
+        active: false,
+        healthRegen: 0,
+        speedBoost: 0,
+        damageBoost: 0
+    },
+    territorySectionKey: null, // Current territory section player is in
+    lastHealthRegen: 0, // Time of last health regeneration
     
     // Shooting state
     reloading: false,
@@ -45,7 +65,11 @@ const player = {
     movementAngle: 0,
     
     // Game start time for survival timer
-    gameStartTime: 0
+    gameStartTime: 0,
+    
+    // Statistics
+    sectionCleared: 0,
+    territoriesClaimed: 0
 };
 
 // Initialize player for a new game
@@ -73,13 +97,31 @@ function initPlayer() {
     player.invincible = false;
     player.invincibleTimer = 0;
     
+    // Reset territory system
+    player.torchCount = CONFIG.TERRITORY.TORCH_INITIAL;
+    player.inTerritory = false;
+    player.inHomeRadius = false;
+    player.territoryBonus = {
+        active: false,
+        healthRegen: 0,
+        speedBoost: 0,
+        damageBoost: 0
+    };
+    player.territorySectionKey = null;
+    player.lastHealthRegen = 0;
+    
     // Reset base stats
     player.baseDamage = CONFIG.PLAYER_START_STATS.baseDamage;
     player.critChance = CONFIG.PLAYER_START_STATS.critChance;
     player.critMultiplier = CONFIG.PLAYER_START_STATS.critMultiplier;
     
-    // Reset weapon to pistol
+    // Reset equipped weapons
+    player.equippedWeapons = ['pistol'];
+    player.activeWeaponIndex = 0;
     player.activeWeaponId = 'pistol';
+    
+    // Initialize ammunition for all weapon types
+    initializeAmmunition();
     
     // Reset all weapon upgrades
     WEAPONS.forEach(weapon => {
@@ -95,6 +137,9 @@ function initPlayer() {
         if (weapon.id !== 'pistol') {
             weapon.unlocked = false;
         }
+        
+        // Reset attachments
+        weapon.attachments = [];
     });
     
     // Create actual weapon object from base weapon data
@@ -105,8 +150,32 @@ function initPlayer() {
     player.reloadStart = 0;
     player.lastFired = 0;
     
+    // Reset statistics
+    player.sectionCleared = 0;
+    player.territoriesClaimed = 0;
+    
     // Set game start time
     player.gameStartTime = performance.now();
+}
+
+// Initialize ammunition for all weapon types
+function initializeAmmunition() {
+    player.ammunition = {};
+    
+    // Initialize ammo for each ammo type in config
+    for (const ammoType in CONFIG.AMMO_TYPES) {
+        const ammoConfig = CONFIG.AMMO_TYPES[ammoType];
+        player.ammunition[ammoType] = {
+            current: 0,
+            reserve: Math.floor(ammoConfig.maxReserve * 0.3) // Start with 30% of max reserve
+        };
+    }
+    
+    // Ensure starting weapon has full ammo
+    const pistolWeapon = WEAPONS.find(w => w.id === 'pistol');
+    if (pistolWeapon) {
+        player.ammunition.pistol.current = pistolWeapon.maxAmmo;
+    }
 }
 
 // Update player state
@@ -124,12 +193,31 @@ function updatePlayer(deltaTime) {
     if (player.reloading) {
         const currentTime = performance.now();
         if (currentTime - player.reloadStart >= player.weapon.reloadTime) {
-            player.reloading = false;
-            player.weapon.ammo = player.weapon.maxAmmo;
-            updateUI();
+            completeReload();
+        }
+    }
+    
+    // Apply territory effects (health regeneration)
+    if (player.inTerritory || player.inHomeRadius) {
+        const currentTime = performance.now();
+        const regenInterval = 1000; // 1 second between regeneration ticks
+        
+        if (currentTime - player.lastHealthRegen >= regenInterval) {
+            player.lastHealthRegen = currentTime;
             
-            // Play reload complete sound
-            // playSound('reloadComplete');
+            // Calculate regeneration amount
+            let regenAmount = CONFIG.TERRITORY.HEALTH_REGEN;
+            
+            // Apply home radius bonus if applicable
+            if (player.inHomeRadius) {
+                regenAmount *= CONFIG.TERRITORY.HOME_BONUS_MULTIPLIER;
+            }
+            
+            // Apply health regeneration
+            if (player.health < player.maxHealth) {
+                player.health = Math.min(player.health + regenAmount, player.maxHealth);
+                updateUI();
+            }
         }
     }
 }
@@ -163,11 +251,94 @@ function movePlayer(deltaTime) {
         player.moving = false;
     }
     
-    // Apply movement - sử dụng tốc độ cố định 5 thay vì deltaTime
-    // Lưu ý: phần này là điều chỉnh chính để sửa vấn đề tốc độ
-    const speed = player.speed;
+    // Apply territory speed boost if active
+    let speedMultiplier = 1;
+    if (player.territoryBonus.active) {
+        speedMultiplier = player.territoryBonus.speedBoost;
+    }
+    
+    // Apply movement with fixed speed (adjusted for territory bonus)
+    const speed = player.speed * speedMultiplier;
     player.x += dx * speed;
     player.y += dy * speed;
+    
+    // Check if player is in a claimed territory or home radius
+    checkTerritoryEffects();
+}
+
+// Check and apply territory effects for player
+function checkTerritoryEffects() {
+    // Reset territory statuses
+    const previousInTerritory = player.inTerritory;
+    const previousInHome = player.inHomeRadius;
+    
+    player.inTerritory = false;
+    player.inHomeRadius = false;
+    
+    // Check if in home radius first (higher priority)
+    const distanceFromHome = Math.sqrt(
+        Math.pow(player.x - player.startX, 2) + 
+        Math.pow(player.y - player.startY, 2)
+    );
+    
+    if (distanceFromHome <= CONFIG.TERRITORY.HOME_RADIUS) {
+        player.inHomeRadius = true;
+        
+        // Set territory bonuses (higher in home radius)
+        player.territoryBonus = {
+            active: true,
+            healthRegen: CONFIG.TERRITORY.HEALTH_REGEN * CONFIG.TERRITORY.HOME_BONUS_MULTIPLIER,
+            speedBoost: CONFIG.TERRITORY.SPEED_BOOST * CONFIG.TERRITORY.HOME_BONUS_MULTIPLIER,
+            damageBoost: CONFIG.TERRITORY.DAMAGE_BOOST * CONFIG.TERRITORY.HOME_BONUS_MULTIPLIER
+        };
+    } else {
+        // Check if in a claimed territory
+        const sectionX = Math.floor(player.x / CONFIG.SECTION_SIZE);
+        const sectionY = Math.floor(player.y / CONFIG.SECTION_SIZE);
+        const sectionKey = `${sectionX},${sectionY}`;
+        
+        // Find section in mapSections
+        const currentSection = mapSections.find(s => 
+            Math.floor(s.x / CONFIG.SECTION_SIZE) === sectionX && 
+            Math.floor(s.y / CONFIG.SECTION_SIZE) === sectionY
+        );
+        
+        if (currentSection && currentSection.isTerritory) {
+            player.inTerritory = true;
+            player.territorySectionKey = sectionKey;
+            
+            // Set standard territory bonuses
+            player.territoryBonus = {
+                active: true,
+                healthRegen: CONFIG.TERRITORY.HEALTH_REGEN,
+                speedBoost: CONFIG.TERRITORY.SPEED_BOOST,
+                damageBoost: CONFIG.TERRITORY.DAMAGE_BOOST
+            };
+        } else {
+            // Not in any territory
+            player.territoryBonus = {
+                active: false,
+                healthRegen: 0,
+                speedBoost: 1,
+                damageBoost: 1
+            };
+        }
+    }
+    
+    // Visual feedback when entering/leaving territory
+    if (!previousInTerritory && (player.inTerritory || player.inHomeRadius)) {
+        // Just entered territory
+        createScreenFlash('territory');
+        showGameMessage("Entered Safe Territory");
+    } else if (previousInTerritory && !player.inTerritory && !player.inHomeRadius) {
+        // Just left territory
+        showGameMessage("Left Safe Territory");
+    }
+    
+    // Visual feedback for home radius
+    if (!previousInHome && player.inHomeRadius) {
+        showGameMessage("Entered Home Zone");
+    }
 }
 
 // Try to shoot based on player weapon and state
@@ -181,6 +352,11 @@ function tryShoot() {
         
         player.lastFired = currentTime;
         player.weapon.ammo--;
+        
+        // Update current ammo in ammunition system
+        if (player.weapon.ammoType) {
+            player.ammunition[player.weapon.ammoType].current = player.weapon.ammo;
+        }
         
         // Calculate bullet start position at edge of player
         const bulletStartX = player.x + Math.cos(player.rotation) * (player.radius + 5);
@@ -200,6 +376,11 @@ function tryShoot() {
                 if (Math.random() * 100 < player.critChance) {
                     damage *= player.critMultiplier;
                     isCritical = true;
+                }
+                
+                // Apply territory damage boost
+                if (player.territoryBonus.active) {
+                    damage *= player.territoryBonus.damageBoost;
                 }
                 
                 // Add base damage
@@ -231,6 +412,11 @@ function tryShoot() {
             if (Math.random() * 100 < player.critChance) {
                 damage *= player.critMultiplier;
                 isCritical = true;
+            }
+            
+            // Apply territory damage boost
+            if (player.territoryBonus.active) {
+                damage *= player.territoryBonus.damageBoost;
             }
             
             // Add base damage
@@ -282,166 +468,48 @@ function tryShoot() {
 // Start reloading the current weapon
 function startReload() {
     if (!player.reloading && player.weapon.ammo < player.weapon.maxAmmo) {
+        // Check if we have reserve ammo for this weapon
+        const ammoType = player.weapon.ammoType;
+        
+        if (!player.ammunition[ammoType] || player.ammunition[ammoType].reserve <= 0) {
+            // No reserve ammo, can't reload
+            showGameMessage("No reserve ammo!");
+            return;
+        }
+        
         player.reloading = true;
         player.reloadStart = performance.now();
         
         // Play reload sound
         // playSound('reloadStart');
+        
+        // Show reload message
+        showGameMessage("Reloading...");
     }
 }
 
-// Switch to a different weapon
-function switchWeapon(weaponId) {
-    // Find the weapon
-    const weaponData = WEAPONS.find(w => w.id === weaponId);
+// Complete reload process
+function completeReload() {
+    player.reloading = false;
     
-    // Check if weapon exists and is unlocked
-    if (weaponData && weaponData.unlocked) {
-        // Cancel any current reload
-        player.reloading = false;
+    const ammoType = player.weapon.ammoType;
+    
+    if (player.ammunition[ammoType]) {
+        // Calculate how many bullets we need
+        const bulletsNeeded = player.weapon.maxAmmo - player.weapon.ammo;
         
-        // Set the new active weapon
-        player.activeWeaponId = weaponId;
+        // Calculate how many bullets we can actually add based on reserves
+        const bulletsToAdd = Math.min(bulletsNeeded, player.ammunition[ammoType].reserve);
         
-        // Create weapon instance with current upgrades
-        player.weapon = createWeapon(weaponId);
+        // Add the bullets to weapon and remove from reserves
+        player.weapon.ammo += bulletsToAdd;
+        player.ammunition[ammoType].reserve -= bulletsToAdd;
+        player.ammunition[ammoType].current = player.weapon.ammo;
+        
+        // Play reload complete sound
+        // playSound('reloadComplete');
         
         // Update UI
         updateUI();
-        
-        // Play weapon switch sound
-        // playSound('weaponSwitch');
-        
-        return true;
     }
-    
-    return false;
-}
-
-// Apply damage to player (handles armor calculation)
-function damagePlayer(amount) {
-    // Skip if player is invincible
-    if (player.invincible) return;
-    
-    // Apply damage to armor first, then health
-    if (player.armor > 0) {
-        // Armor absorbs 50% of damage
-        const armorDamage = Math.min(player.armor, amount * 0.5);
-        player.armor -= armorDamage;
-        amount -= armorDamage;
-    }
-    
-    // Apply remaining damage to health
-    player.health -= amount;
-    
-    // Make player briefly invincible
-    player.invincible = true;
-    player.invincibleTimer = 0;
-    player.lastDamageTime = performance.now();
-    
-    // Play damage sound
-    // playSound('playerDamage');
-    
-    // Create screen flash effect
-    createScreenFlash('damage');
-    
-    // Update UI
-    updateUI();
-    
-    // Check if player died
-    if (player.health <= 0) {
-        gameOver();
-    }
-}
-
-// Add XP to player and check for level up
-function addXP(amount) {
-    player.xp += amount;
-    
-    // Check for level up
-    if (player.xp >= player.xpToNextLevel) {
-        levelUp();
-    }
-    
-    // Update UI
-    updateUI();
-}
-
-// Level up player
-function levelUp() {
-    player.level++;
-    player.xp -= player.xpToNextLevel;
-    player.xpToNextLevel = Math.floor(player.xpToNextLevel * CONFIG.XP_LEVEL_MULTIPLIER);
-    
-    // Show level up UI
-    showLevelUpMenu();
-    
-    // Play level up sound
-    // playSound('levelUp');
-    
-    // Create level up visual effect
-    createEffect(
-        player.x,
-        player.y,
-        50, // radius
-        1.0, // duration
-        'levelUp'
-    );
-    
-    // Update UI
-    updateUI();
-}
-
-// Apply a stat upgrade to the player
-function applyStatUpgrade(upgradeType) {
-    const property = upgradeType.property;
-    
-    // Apply the upgrade based on type
-    if (upgradeType.value) {
-        // Add a fixed value
-        player[property] += upgradeType.value;
-        
-        // Check if there's a maximum value
-        if (upgradeType.max && player[property] > upgradeType.max) {
-            player[property] = upgradeType.max;
-        }
-        
-        // If this is a health upgrade, also heal the player
-        if (upgradeType.healOnUpgrade && property === 'maxHealth') {
-            player.health += upgradeType.value;
-        }
-    } else if (upgradeType.multiplier) {
-        // Apply a multiplier
-        player[property] *= upgradeType.multiplier;
-    }
-    
-    // Update UI
-    updateUI();
-}
-
-// Get player's current survival time in formatted string
-function getPlayerSurvivalTime() {
-    const currentTime = performance.now();
-    const survivalTimeMs = currentTime - player.gameStartTime;
-    
-    // Convert to seconds
-    let seconds = Math.floor(survivalTimeMs / 1000);
-    
-    // Calculate minutes and hours
-    const hours = Math.floor(seconds / 3600);
-    seconds %= 3600;
-    const minutes = Math.floor(seconds / 60);
-    seconds %= 60;
-    
-    // Format the string
-    let timeString = '';
-    if (hours > 0) {
-        timeString += `${hours}h `;
-    }
-    if (minutes > 0 || hours > 0) {
-        timeString += `${minutes}m `;
-    }
-    timeString += `${seconds}s`;
-    
-    return timeString;
 }
