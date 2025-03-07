@@ -34,6 +34,12 @@ function initGame() {
     
     // Show welcome message
     showGameMessage("Welcome to Zombie Apocalypse!");
+    
+    // Add a test zombie to verify movement
+    setTimeout(() => {
+        spawnZombie(player.x + 200, player.y + 200, 1);
+        console.log("Test zombie spawned!");
+    }, 1000);
 }
 
 // Main game loop
@@ -65,7 +71,11 @@ function update(currentTime) {
         updatePlayer(deltaTime);
         movePlayer(deltaTime);
         updateBullets(deltaTime);
-        updateZombies(deltaTime);
+        
+        // Cập nhật zombie với deltaTime cố định để đảm bảo tốc độ di chuyển
+        const fixedDelta = 1/60; // 60fps đã cố định
+        updateZombies(fixedDelta);
+        
         updateEffects(deltaTime);
         updatePickups(deltaTime);
         
@@ -84,6 +94,12 @@ function update(currentTime) {
         
         // Draw minimap
         drawMinimap();
+        
+        // Log zombie count for debugging
+        if (zombies.length > 0 && currentTime % 1000 < 20) {
+            console.log("Zombie count:", zombies.length);
+            console.log("First zombie:", zombies[0]);
+        }
     }
     
     gameLoop = requestAnimationFrame(update);

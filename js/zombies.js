@@ -282,9 +282,22 @@ function updateZombies(deltaTime) {
                     speedMultiplier = 1.5; // Speed burst
                 }
                 
-                // ĐÃ SỬA: Loại bỏ deltaTime để tốc độ không bị ảnh hưởng
-                zombie.x += zombie.moveX * zombie.speed * speedMultiplier / 60;
-                zombie.y += zombie.moveY * zombie.speed * speedMultiplier / 60;
+                // QUAN TRỌNG: Đây là dòng bị lỗi, sửa lại cách di chuyển
+                // Loại bỏ deltaTime và sử dụng tốc độ cố định
+                const moveSpeed = zombie.speed * speedMultiplier * 0.05;
+                zombie.x += zombie.moveX * moveSpeed;
+                zombie.y += zombie.moveY * moveSpeed;
+                
+                // Thêm log để debug
+                if (i === 0 && zombies.length > 0 && Math.random() < 0.01) {
+                    console.log("Zombie moving:", 
+                        "x:", zombie.x.toFixed(2), 
+                        "y:", zombie.y.toFixed(2), 
+                        "speed:", moveSpeed.toFixed(2),
+                        "moveX:", zombie.moveX.toFixed(2),
+                        "moveY:", zombie.moveY.toFixed(2)
+                    );
+                }
             }
         }
         
