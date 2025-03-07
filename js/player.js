@@ -75,8 +75,8 @@ const player = {
 // Initialize player for a new game
 function initPlayer() {
     // Reset position
-    player.x = 0;
-    player.y = 0;
+    player.x = 100;
+    player.y = 100;
     player.startX = 0;
     player.startY = 0;
     
@@ -512,4 +512,46 @@ function completeReload() {
         // Update UI
         updateUI();
     }
+}
+
+// Add XP and handle level up
+function addXP(amount) {
+    // Add XP
+    player.xp += amount;
+    
+    // Check if player has reached enough XP to level up
+    if (player.xp >= player.xpToNextLevel) {
+        // Level up
+        player.level++;
+        
+        // Calculate overflow XP
+        const overflowXP = player.xp - player.xpToNextLevel;
+        
+        // Calculate new XP requirement for next level
+        player.xpToNextLevel = Math.floor(CONFIG.XP_TO_FIRST_LEVEL * Math.pow(CONFIG.XP_LEVEL_MULTIPLIER, player.level - 1));
+        
+        // Apply overflow XP to new level
+        player.xp = overflowXP;
+        
+        // Create level up effect
+        createEffect(
+            player.x,
+            player.y,
+            50, // radius
+            2, // duration
+            'levelUp'
+        );
+        
+        // Create screen flash
+        createScreenFlash('level');
+        
+        // Show level up message
+        showGameMessage(`Level ${player.level} reached!`);
+        
+        // Open level up menu
+        showLevelUpMenu();
+    }
+    
+    // Update UI
+    updateUI();
 }
