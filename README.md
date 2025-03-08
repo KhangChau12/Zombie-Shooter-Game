@@ -32,7 +32,7 @@ zombie-shooter/
 
 2. Tạo cấu trúc thư mục như trên
 
-3. Sao chép nội dung của mỗi file từ các artifact vào file tương ứng
+3. Sao chép nội dung của mỗi file từ mã nguồn vào file tương ứng
 
 4. Đảm bảo tất cả các file script được đặt trong thư mục `js/`
 
@@ -46,7 +46,7 @@ zombie-shooter/
 - **Mở cửa hàng**: Phím E hoặc nút Shop
 - **Nâng cấp vũ khí**: Phím Tab hoặc nút Upgrade Weapon
 - **Đặt đuốc lãnh thổ**: Phím F
-- **Chuyển vũ khí**: Phím Q (tiếp theo), cuộn chuột hoặc phím số 1-3
+- **Chuyển vũ khí**: Phím Q (tiếp theo), cuộn chuột hoặc phím số 1-5
 - **Tương tác với rương**: Tự động khi đến gần
 
 ## Tính năng chính
@@ -54,10 +54,11 @@ zombie-shooter/
 ### 1. Hệ thống Lãnh thổ
 - **Dọn dẹp Section**: Mỗi section có số lượng zombie cần tiêu diệt cố định
 - **Đặt đuốc đánh dấu**: Đặt 4 đuốc ở 4 góc phần tư của section đã dọn dẹp để biến thành lãnh thổ
-- **Hiệu ứng trực quan**: Phần tư section đã đặt đuốc sẽ được đánh dấu bằng màu sắc
+- **Hiệu ứng trực quan**: Phần tư section đã đặt đuốc được đánh dấu bằng màu sắc
 - **Thanh tiến độ**: Hiển thị số lượng đuốc đã đặt và tiến độ chiếm lãnh thổ
 - **Hiệu ứng lãnh thổ**: Tự động hồi máu, tăng sát thương, tăng tốc độ di chuyển
 - **Khu vực nhà chính**: Khu vực xuất phát có hiệu ứng lãnh thổ mạnh hơn
+- **Hiển thị trên minimap**: Section đã chiếm được đánh dấu bằng màu xanh lá và biểu tượng ngọn lửa
 
 ### 2. Hệ thống Rương Báu
 - **Mở rương kho báu**: Xuất hiện sau khi dọn sạch zombie trong section
@@ -72,21 +73,23 @@ zombie-shooter/
 ### 4. Hệ thống Vũ khí Nâng cấp
 - **Phụ kiện vũ khí**: Gắn các phụ kiện (ống ngắm, báng súng, ống giảm thanh...)
 - **Tùy chỉnh vũ khí**: Nâng cấp sát thương, tốc độ bắn, độ chính xác
-- **Chuyển đổi nhanh**: Chuyển đổi giữa tối đa 3 vũ khí đã trang bị
+- **Chuyển đổi nhanh**: Chuyển đổi giữa tối đa 5 vũ khí đã trang bị với thanh công cụ phía dưới
 
 ### 5. Hệ thống UI cải tiến
 - **Thanh tiến độ dọn dẹp section**: Hiển thị tiến trình dọn dẹp zombie
 - **Hiển thị trạng thái lãnh thổ**: Chỉ báo lãnh thổ và các hiệu ứng đang kích hoạt
-- **Chọn vũ khí nhanh**: UI chọn vũ khí trực quan ở phía trên màn hình
+- **Chọn vũ khí nhanh**: Thanh công cụ vũ khí trực quan ở phía dưới màn hình
 - **Hiển thị đuốc lãnh thổ**: Hiển thị số lượng đuốc hiện có
+- **Hiển thị số coin**: Hiển thị số tiền xu hiện có phía trên màn hình
+- **Thông báo nhận vật phẩm**: Hiệu ứng thông báo khi nhận vật phẩm mới
 
-## Cơ chế chiếm lãnh thổ cải tiến
+## Cơ chế chiếm lãnh thổ
 
 ### Dọn dẹp Section
 1. Mỗi section có một số lượng zombie cố định dựa trên độ khó
 2. Tiêu diệt tất cả zombie để "dọn dẹp" section
 3. Section đã dọn dẹp sẽ hiển thị rương báu và đường kẻ chia 4 phần
-4. Section đã dọn sẽ không xuất hiện zombie nữa
+4. Zombie sẽ tiếp tục xuất hiện ở section đã dọn dẹp sau mỗi 2 giây nếu không được đánh dấu là lãnh thổ
 
 ### Đánh dấu Lãnh thổ
 1. Sau khi section đã dọn dẹp, sử dụng đuốc để đánh dấu (phím F)
@@ -96,6 +99,7 @@ zombie-shooter/
 5. Thanh tiến độ hiển thị số lượng đuốc đã đặt (1/4, 2/4, 3/4, 4/4)
 6. Khi đặt đủ 4 đuốc, section sẽ tự động trở thành lãnh thổ
 7. Người chơi nhận bonus XP và hồi máu khi chiếm lãnh thổ thành công
+8. Section đã chiếm được đánh dấu trên minimap với màu xanh lá và biểu tượng ngọn lửa
 
 ### Rương Kho Báu
 1. Xuất hiện tại trung tâm section đã dọn dẹp
@@ -106,6 +110,16 @@ zombie-shooter/
    - 25% cơ hội nhận 3 đuốc
    - 5% cơ hội nhận 4 đuốc
 4. Có thể nhận được đạn, tiền xu, phụ kiện vũ khí
+
+## Cải tiến mới
+
+1. **Hiển thị số coin**: Thêm phần hiển thị số tiền xu phía trên màn hình, giúp người chơi dễ dàng theo dõi số tiền hiện có.
+
+2. **Cải tiến minimap**: Thêm biểu tượng ngọn lửa và màu sắc đặc biệt cho section đã chiếm trên minimap, giúp người chơi dễ dàng nhận biết các khu vực an toàn.
+
+3. **Thanh vũ khí cải tiến**: Thanh vũ khí ở dưới màn hình hiển thị đúng từ 1-5, giúp dễ dàng chuyển đổi giữa các vũ khí bằng phím số tương ứng.
+
+4. **Home Base cải tiến**: Khu vực xuất phát được cải tiến với đầy đủ tính năng, được đánh dấu sẵn là lãnh thổ và có các hiệu ứng tăng cường.
 
 ## Mở rộng
 

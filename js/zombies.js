@@ -14,97 +14,80 @@ function spawnZombiesInDiscoveredSections() {
     if (remainingSlots <= 0) return;
     
     mapSections.forEach(section => {
-        // Skip if section is cleared or is territory
-        if (section.isCleared || section.isTerritory) return;
+        // Skip if section is territory (but not if just cleared)
+        if (section.isTerritory) return;
         
         // If no more room to create zombies, return
         if (zombies.length >= CONFIG.MAX_ZOMBIES_ON_SCREEN) return;
         
-        // If all section zombies have been spawned and killed, don't spawn more
-        if (section.zombiesRemaining <= 0) return;
-        
-        // Calculate distance from start
-        const sectionCenterX = section.x + CONFIG.SECTION_SIZE / 2;
-        const sectionCenterY = section.y + CONFIG.SECTION_SIZE / 2;
+        // Get section coordinates
         const sectionX = Math.floor(section.x / CONFIG.SECTION_SIZE);
         const sectionY = Math.floor(section.y / CONFIG.SECTION_SIZE);
+        const sectionKey = `${sectionX},${sectionY}`;
         
-        // Distance from starting point in section units
-        const distanceFromStart = Math.sqrt(
-            Math.pow(sectionX - player.startSectionX, 2) + 
-            Math.pow(sectionY - player.startSectionY, 2)
-        );
+        // Count current zombies in this section
+        const zombiesInSection = zombies.filter(z => 
+            z.sectionX === sectionX && z.sectionY === sectionY
+        ).length;
         
-        // Spawn rate increases with distance from start
-        const spawnRate = 0.03 * (1 + distanceFromStart * 0.03) * section.zombiesDensity;
+        // Update section's current zombie count
+        section.currentZombieCount = zombiesInSection;
         
-        // Spawn interval decreases with distance (faster spawning)
-        const spawnInterval = Math.max(1000, 5000 - distanceFromStart * 100);
-        
-        // Only spawn if enough time has passed and random check passes
-        if (currentTime - section.lastSpawnTime > spawnInterval && Math.random() < spawnRate) {
-            section.lastSpawnTime = currentTime;
+        // If the section is cleared but not territory, periodically respawn zombies
+        if (section.isCleared && !section.isTerritory) {
+            // Use a shorter spawn interval (2 seconds)
+            const respawnInterval = 2000; // 2 seconds
             
-            // Calculate distance from player to section center
-            const distanceToPlayer = Math.sqrt(
-                Math.pow(sectionCenterX - player.x, 2) + 
-                Math.pow(sectionCenterY - player.y, 2)
-            );
+            // If enough time passed, spawn a new zombie
+            if (currentTime - section.lastSpawnTime > respawnInterval) {
+                section.lastSpawnTime = currentTime;
+                
+                // Make sure we're not exceeding the max zombies for this section
+                if (zombiesInSection < section.zombiesTotal) {
+                    // Get a random position in this section
+                    const spawnX = section.x + Math.random() * CONFIG.SECTION_SIZE;
+                    const spawnY = section.y + Math.random() * CONFIG.SECTION_SIZE;
+                    
+                    // Spawn a zombie
+                    spawnZombie(spawnX, spawnY, section.difficulty);
+                }
+            }
+            return; // Skip the rest of logic for respawning in cleared sections
+        }
+        
+        // If section still has zombies to spawn for initial clearing
+        if (!section.isCleared && section.zombiesRemaining > 0) {
+            // Use original spawn logic with distance and spawn rate
+            // Original spawn rate logic here...
+            const spawnInterval = 2000; // 2 seconds between spawns
             
-            // Only spawn zombies if player is relatively close to section
-            // Distance increases with difficulty to allow more zombies from further away
-            const spawnDistance = CONFIG.SPAWN_DISTANCE_MIN + section.difficulty * 100;
-            if (distanceToPlayer < spawnDistance) {
-                // Find valid spawn position outside screen but within section
+            if (currentTime - section.lastSpawnTime > spawnInterval && zombiesInSection < section.zombiesRemaining) {
+                section.lastSpawnTime = currentTime;
+                
+                // Get a random position at the edge of the section
                 let spawnX, spawnY;
-                let isValid = false;
-                let attempts = 0;
+                const rand = Math.random();
                 
-                while (!isValid && attempts < 10) {
-                    attempts++;
-                    
-                    // Random position within section
+                if (rand < 0.25) {
+                    // Top edge
                     spawnX = section.x + Math.random() * CONFIG.SECTION_SIZE;
+                    spawnY = section.y;
+                } else if (rand < 0.5) {
+                    // Right edge
+                    spawnX = section.x + CONFIG.SECTION_SIZE;
                     spawnY = section.y + Math.random() * CONFIG.SECTION_SIZE;
-                    
-                    // Check if it's outside screen (from player's view) but not too far
-                    const distanceToPlayer = Math.sqrt(
-                        Math.pow(spawnX - player.x, 2) + 
-                        Math.pow(spawnY - player.y, 2)
-                    );
-                    
-                    // Make zombies spawn farther in harder sections
-                    const minDistance = CONFIG.SPAWN_DISTANCE_MIN;
-                    const maxDistance = CONFIG.SPAWN_DISTANCE_MAX + section.difficulty * 50;
-                    
-                    if (distanceToPlayer > minDistance && distanceToPlayer < maxDistance) {
-                        isValid = true;
-                    }
+                } else if (rand < 0.75) {
+                    // Bottom edge
+                    spawnX = section.x + Math.random() * CONFIG.SECTION_SIZE;
+                    spawnY = section.y + CONFIG.SECTION_SIZE;
+                } else {
+                    // Left edge
+                    spawnX = section.x;
+                    spawnY = section.y + Math.random() * CONFIG.SECTION_SIZE;
                 }
                 
-                if (isValid) {
-                    // Number of zombies that can still be spawned for this section
-                    const maxZombiesToSpawn = Math.min(
-                        remainingSlots,
-                        Math.min(3, 1 + Math.floor(section.difficulty / 3)),
-                        section.zombiesRemaining
-                    );
-                    
-                    let spawnCount = 0;
-                    for (let i = 0; i < maxZombiesToSpawn; i++) {
-                        if (zombies.length < CONFIG.MAX_ZOMBIES_ON_SCREEN && 
-                            (i === 0 || Math.random() < 0.7)) { // 70% chance to spawn more
-                            spawnSectionZombie(
-                                spawnX + (Math.random() - 0.5) * 50, 
-                                spawnY + (Math.random() - 0.5) * 50, 
-                                section.difficulty,
-                                sectionX,
-                                sectionY
-                            );
-                            spawnCount++;
-                        }
-                    }
-                }
+                // Spawn a zombie
+                spawnSectionZombie(spawnX, spawnY, section.difficulty, sectionX, sectionY);
             }
         }
     });

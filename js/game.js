@@ -26,6 +26,9 @@ function initGame() {
     // Initialize UI
     initUI();
     
+    // Create all necessary UI elements
+    createUIElements();
+
     // Update UI
     updateUI();
     
@@ -432,49 +435,8 @@ function drawPlayer() {
 
 // Draw weapon selector UI
 function drawWeaponSelector() {
-    if (!player.equippedWeapons || player.equippedWeapons.length < 1) return;
-    
-    const topMargin = 20;
-    const weaponBoxSize = 60;
-    const spacing = 10;
-    const totalWidth = player.equippedWeapons.length * weaponBoxSize + (player.equippedWeapons.length - 1) * spacing;
-    const startX = (canvas.width - totalWidth) / 2;
-    
-    for (let i = 0; i < player.equippedWeapons.length; i++) {
-        const weaponId = player.equippedWeapons[i];
-        const weaponData = getWeaponById(weaponId);
-        const isActive = i === player.activeWeaponIndex;
-        
-        const boxX = startX + i * (weaponBoxSize + spacing);
-        const boxY = topMargin;
-        
-        // Draw selector box
-        ctx.fillStyle = isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.5)';
-        ctx.strokeStyle = isActive ? weaponData.color : '#555';
-        ctx.lineWidth = isActive ? 3 : 1;
-        
-        ctx.beginPath();
-        ctx.roundRect(boxX, boxY, weaponBoxSize, weaponBoxSize, 5);
-        ctx.fill();
-        ctx.stroke();
-        
-        // Draw weapon number
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '14px Orbitron';
-        ctx.textAlign = 'left';
-        ctx.fillText(`${i+1}`, boxX + 5, boxY + 15);
-        
-        // Draw weapon name
-        ctx.font = '10px Orbitron';
-        ctx.fillStyle = isActive ? '#FFFFFF' : '#AAA';
-        ctx.textAlign = 'center';
-        ctx.fillText(weaponData.name, boxX + weaponBoxSize/2, boxY + weaponBoxSize - 10);
-        
-        // Draw ammo
-        const ammoCount = player.ammunition[weaponData.ammoType].current;
-        const reserveAmmo = player.ammunition[weaponData.ammoType].reserve;
-        ctx.fillText(`${ammoCount}/${reserveAmmo}`, boxX + weaponBoxSize/2, boxY + weaponBoxSize - 25);
-    }
+    // Function disabled to remove top weapon selector
+    return;
 }
 
 // Draw torch indicator

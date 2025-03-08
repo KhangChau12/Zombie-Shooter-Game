@@ -498,12 +498,20 @@ function loadGame() {
                 loadingScreen.style.opacity = '0';
                 setTimeout(() => {
                     loadingScreen.remove();
-                    initGame();
+                    
+                    // Ensure we wait for DOM to be fully ready
+                    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                        initGame();
+                    } else {
+                        window.addEventListener('DOMContentLoaded', initGame);
+                    }
                 }, 500);
             }, 500);
         }
         
-        loadingBar.style.width = `${progress}%`;
+        if (loadingBar) {
+            loadingBar.style.width = `${progress}%`;
+        }
     }, 100);
 }
 

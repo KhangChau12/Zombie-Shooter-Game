@@ -30,8 +30,8 @@ function initMap() {
         isTerritory: false,
         isCleared: false,
         isHomeBase: true,
-        zombiesTotal: 0,
-        zombiesRemaining: 0,
+        zombiesTotal: 16,
+        zombiesRemaining: 16,
         hasTreasure: false,
         treasureCollected: false,
         torches: [],
@@ -117,38 +117,49 @@ function spawnInitialZombiesForSection(section) {
     // Only spawn for sections that aren't cleared
     if (section.isCleared) return;
     
-    // Calculate the number of zombies to spawn initially (just a portion)
-    // This prevents overwhelming the player; the rest will spawn over time
-    const initialSpawnCount = Math.min(
-        Math.ceil(section.zombiesTotal * 0.3), // Spawn 30% initially
-        10 // Cap at 10 to prevent overwhelming
-    );
+    // Initialize spawn timer for this section
+    section.lastSpawnTime = performance.now();
+    
+    // Spawn an initial batch of zombies (about 30% of total)
+    const initialSpawnCount = Math.ceil(section.zombiesTotal * 0.3);
     
     for (let i = 0; i < initialSpawnCount; i++) {
-        // Random position within the section, avoiding the very center where the player might be
-        let spawnX, spawnY;
+        // Divide the section into a grid to spread out zombies
+        const gridSize = Math.ceil(Math.sqrt(initialSpawnCount));
+        const cellWidth = CONFIG.SECTION_SIZE / gridSize;
+        const cellHeight = CONFIG.SECTION_SIZE / gridSize;
         
-        // Divide the section into 9 equal parts (3x3 grid)
-        const gridSize = CONFIG.SECTION_SIZE / 3;
-        const playerCell = {
-            x: Math.floor((player.x - section.x) / gridSize),
-            y: Math.floor((player.y - section.y) / gridSize)
-        };
+        // Calculate cell position
+        const cellX = i % gridSize;
+        const cellY = Math.floor(i / gridSize);
         
-        // Choose a different cell than the player is in
-        let cellX, cellY;
-        do {
-            cellX = Math.floor(Math.random() * 3);
-            cellY = Math.floor(Math.random() * 3);
-        } while (cellX === playerCell.x && cellY === playerCell.y);
+        // Calculate spawn position within the cell with randomness
+        const spawnX = section.x + (cellX * cellWidth) + Math.random() * cellWidth;
+        const spawnY = section.y + (cellY * cellHeight) + Math.random() * cellHeight;
         
-        // Calculate spawn position within the chosen cell
-        spawnX = section.x + (cellX * gridSize) + Math.random() * gridSize;
-        spawnY = section.y + (cellY * gridSize) + Math.random() * gridSize;
-        
-        // Spawn the zombie
-        spawnInitialSectionZombie(spawnX, spawnY, section.difficulty);
+        // Make sure zombies don't spawn too close to player
+        const distToPlayer = distance(spawnX, spawnY, player.x, player.y);
+        if (distToPlayer < 200) {
+            // If too close, adjust position
+            const angle = Math.random() * Math.PI * 2;
+            const offsetDistance = 250 + Math.random() * 100;
+            const adjustedX = player.x + Math.cos(angle) * offsetDistance;
+            const adjustedY = player.y + Math.sin(angle) * offsetDistance;
+            
+            // Make sure adjusted position is still within section
+            const adjustedPosX = Math.max(section.x, Math.min(section.x + CONFIG.SECTION_SIZE, adjustedX));
+            const adjustedPosY = Math.max(section.y, Math.min(section.y + CONFIG.SECTION_SIZE, adjustedY));
+            
+            // Spawn zombie at adjusted position
+            spawnInitialSectionZombie(adjustedPosX, adjustedPosY, section.difficulty);
+        } else {
+            // Spawn at calculated position
+            spawnInitialSectionZombie(spawnX, spawnY, section.difficulty);
+        }
     }
+    
+    // Mark the section as ready for periodic respawning
+    section.currentZombieCount = initialSpawnCount;
 }
 
 // Spawn a zombie specifically for section clearing
@@ -661,11 +672,32 @@ function drawMinimap() {
         // Color based on section status
         let color;
         if (section.isTerritory) {
+            // Thay màu xanh cho section đã chiếm
             color = 'rgba(0, 255, 100, 0.7)'; // Green for territory
+            
+            // Vẽ biểu tượng ngọn lửa nếu là lãnh thổ
+            minimapCtx.fillStyle = 'rgba(255, 165, 0, 0.9)'; // Orange
+            minimapCtx.beginPath();
+            // Vẽ hình ngọn lửa đơn giản
+            const flameSize = Math.min(6, CONFIG.SECTION_SIZE/3);
+            minimapCtx.arc(mmX, mmY, flameSize, 0, Math.PI * 2);
+            minimapCtx.fill();
+            
+            // Thêm glow effect
+            const gradient = minimapCtx.createRadialGradient(
+                mmX, mmY, 0,
+                mmX, mmY, flameSize * 2
+            );
+            gradient.addColorStop(0, 'rgba(255, 165, 0, 0.5)');
+            gradient.addColorStop(1, 'rgba(255, 165, 0, 0)');
+            minimapCtx.fillStyle = gradient;
+            minimapCtx.beginPath();
+            minimapCtx.arc(mmX, mmY, flameSize * 2, 0, Math.PI * 2);
+            minimapCtx.fill();
         } else if (section.isCleared) {
             color = 'rgba(0, 200, 255, 0.7)'; // Blue for cleared
         } else {
-            color = getDifficultyColor(section.difficulty, 0.7);
+            color = 'rgba(255, 0, 0, 0.7)';
         }
         
         // Size based on difficulty
@@ -783,6 +815,9 @@ function sectionCleared(section) {
     section.isCleared = true;
     section.zombiesRemaining = 0;
     section.clearProgress = 100;
+    
+    // Reset spawn timer for respawning zombies
+    section.lastSpawnTime = performance.now();
     
     // Update player stats
     player.sectionCleared++;

@@ -1,68 +1,85 @@
 // UI handling and menus
 
 // Update UI elements with current player stats
+// Update UI elements with current player stats
 function updateUI() {
+    // Safely update text content of an element
+    function safeUpdateText(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+        }
+    }
+    
+    // Safely update style width of an element
+    function safeUpdateWidth(id, percentage) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.style.width = percentage + '%';
+        }
+    }
+    
     // Update health, armor, xp, and ammo values
-    document.getElementById('health').textContent = Math.ceil(player.health);
-    document.getElementById('maxHealth').textContent = player.maxHealth;
-    document.getElementById('armor').textContent = Math.ceil(player.armor);
-    document.getElementById('maxArmor').textContent = player.maxArmor;
-    document.getElementById('xp').textContent = player.xp;
-    document.getElementById('xpNext').textContent = player.xpToNextLevel;
-    document.getElementById('ammo').textContent = player.weapon.ammo;
-    document.getElementById('maxAmmo').textContent = player.weapon.maxAmmo;
+    safeUpdateText('health', Math.ceil(player.health));
+    safeUpdateText('maxHealth', player.maxHealth);
+    safeUpdateText('armor', Math.ceil(player.armor));
+    safeUpdateText('maxArmor', player.maxArmor);
+    safeUpdateText('xp', player.xp);
+    safeUpdateText('xpNext', player.xpToNextLevel);
+    safeUpdateText('ammo', player.weapon.ammo);
+    safeUpdateText('maxAmmo', player.weapon.maxAmmo);
     
     // Update stats
-    document.getElementById('level').textContent = player.level;
-    document.getElementById('coins').textContent = formatNumber(player.coins);
-    document.getElementById('kills').textContent = formatNumber(player.kills);
-    document.getElementById('explored').textContent = player.exploredSections.size;
+    safeUpdateText('level', player.level);
+    safeUpdateText('coins', formatNumber(player.coins));
+    safeUpdateText('kills', formatNumber(player.kills));
+    safeUpdateText('explored', player.exploredSections.size);
     
     // Update character stats
-    document.getElementById('baseDamage').textContent = Math.round(player.baseDamage);
-    document.getElementById('critChance').textContent = Math.round(player.critChance);
-    document.getElementById('moveSpeed').textContent = player.speed.toFixed(1);
-    document.getElementById('fireRate').textContent = (1000 / player.weapon.fireRate).toFixed(1);
+    safeUpdateText('baseDamage', Math.round(player.baseDamage));
+    safeUpdateText('critChance', Math.round(player.critChance));
+    safeUpdateText('moveSpeed', player.speed.toFixed(1));
+    safeUpdateText('fireRate', (1000 / player.weapon.fireRate).toFixed(1));
     
     // Calculate distance from start
     const distanceFromStart = Math.sqrt(
         Math.pow(player.x - player.startX, 2) + 
         Math.pow(player.y - player.startY, 2)
     );
-    document.getElementById('distance').textContent = Math.floor(distanceFromStart);
+    safeUpdateText('distance', Math.floor(distanceFromStart));
     
     // Update progress bars
-    document.getElementById('healthBar').style.width = (player.health / player.maxHealth * 100) + '%';
-    document.getElementById('armorBar').style.width = (player.armor / player.maxArmor * 100) + '%';
-    document.getElementById('xpBar').style.width = (player.xp / player.xpToNextLevel * 100) + '%';
-    document.getElementById('ammoBar').style.width = (player.weapon.ammo / player.weapon.maxAmmo * 100) + '%';
+    safeUpdateWidth('healthBar', (player.health / player.maxHealth * 100));
+    safeUpdateWidth('armorBar', (player.armor / player.maxArmor * 100));
+    safeUpdateWidth('xpBar', (player.xp / player.xpToNextLevel * 100));
+    safeUpdateWidth('ammoBar', (player.weapon.ammo / player.weapon.maxAmmo * 100));
     
     // Update territory and torch counts if elements exist
-    if (document.getElementById('territories')) {
-        document.getElementById('territories').textContent = player.territoriesClaimed;
-    }
-    
-    if (document.getElementById('torches')) {
-        document.getElementById('torches').textContent = player.torchCount;
-    }
-    
-    if (document.getElementById('sectionsCleared')) {
-        document.getElementById('sectionsCleared').textContent = player.sectionCleared;
-    }
+    safeUpdateText('territories', player.territoriesClaimed);
+    safeUpdateText('torches', player.torchCount);
+    safeUpdateText('sectionsCleared', player.sectionCleared);
     
     // Update shop coin displays
-    document.getElementById('shopCoins').textContent = formatNumber(player.coins);
-    document.getElementById('weaponUpgradeCoins').textContent = formatNumber(player.coins);
+    safeUpdateText('shopCoins', formatNumber(player.coins));
+    safeUpdateText('weaponUpgradeCoins', formatNumber(player.coins));
     
     // Update game over stats
-    document.getElementById('finalKills').textContent = formatNumber(player.kills);
-    document.getElementById('finalLevel').textContent = player.level;
-    document.getElementById('survivalTime').textContent = getPlayerSurvivalTime();
+    safeUpdateText('finalKills', formatNumber(player.kills));
+    safeUpdateText('finalLevel', player.level);
+    safeUpdateText('survivalTime', getPlayerSurvivalTime());
 
-    // Cập nhật thanh vũ khí mới
-    if (typeof updateBottomBar === 'function') {
+    // Cập nhật thanh vũ khí mới ở dưới (nhưng không phải thanh vũ khí trên đầu)
+    if (typeof updateBottomBar === 'function' && document.getElementById('bottomBar')) {
         updateBottomBar();
     }
+    
+    // Update stats panel if it's visible
+    if (document.getElementById('statsPanel') && 
+        document.getElementById('statsPanel').style.display === 'block') {
+        updateStatsPanel();
+    }
+    
+    safeUpdateText('topCoins', formatNumber(player.coins));
 }
 
 // Open the shop menu
@@ -631,7 +648,11 @@ function showTerritoryClaimConfirmation(section) {
 }
 
 // Initialize UI event listeners
+// Initialize UI event listeners and create necessary UI elements
 function initUI() {
+    // Create UI elements first
+    createUIElements();
+    
     // Setup shop tabs
     setupShopTabs();
     
@@ -642,8 +663,84 @@ function initUI() {
     document.getElementById('closeWeaponUpgradeButton').addEventListener('click', closeWeaponUpgradeMenu);
     document.getElementById('restartButton').addEventListener('click', restartGame);
     
+    // Stats button event listener
+    document.getElementById('statsButton').addEventListener('click', toggleStatsPanel);
+    
     // Add territory and torch stats to UI if they don't exist
     addTerritoryStatsToUI();
+    
+    // Create updated UI components
+    createBottomBar();
+    createLootNotificationContainer();
+}
+
+// Thêm hàm addCoinDisplay mới
+function addCoinDisplay() {
+    // Kiểm tra nếu đã tồn tại
+    if (document.getElementById('topCoinDisplay')) return;
+    
+    // Tạo container hiển thị coin
+    const coinDisplay = document.createElement('div');
+    coinDisplay.id = 'topCoinDisplay';
+    coinDisplay.className = 'top-coin-display';
+    
+    // Thêm icon và text
+    coinDisplay.innerHTML = `
+        <span class="coin-icon">💰</span>
+        <span class="coin-value" id="topCoins">0</span>
+    `;
+    
+    // Thêm vào sau các nút
+    document.getElementById('gameContainer').appendChild(coinDisplay);
+}
+
+// Create or ensure all necessary UI elements exist
+function createUIElements() {
+    // Check if any elements are missing and create them
+    const elements = [
+        'health', 'maxHealth', 'armor', 'maxArmor',
+        'xp', 'xpNext', 'ammo', 'maxAmmo',
+        'level', 'coins', 'kills', 'explored',
+        'baseDamage', 'critChance', 'moveSpeed', 'fireRate',
+        'distance', 'healthBar', 'armorBar', 'xpBar', 'ammoBar',
+        'shopCoins', 'weaponUpgradeCoins',
+        'finalKills', 'finalLevel', 'survivalTime'
+    ];
+    
+    elements.forEach(id => {
+        if (!document.getElementById(id)) {
+            console.log(`Creating missing UI element: ${id}`);
+            const element = document.createElement('span');
+            element.id = id;
+            
+            // Find an appropriate container based on id
+            let container;
+            if (id.includes('Bar')) {
+                container = document.querySelector('.stat-bar');
+            } else if (id.includes('max') || id.includes('health') || id.includes('armor') || id.includes('xp') || id.includes('ammo')) {
+                container = document.querySelector('.ui-section');
+            } else {
+                container = document.querySelector('.stats-section');
+            }
+            
+            if (container) {
+                container.appendChild(element);
+            } else {
+                // If no appropriate container found, create a hidden element in the body
+                element.style.display = 'none';
+                document.body.appendChild(element);
+            }
+        }
+    });
+    
+    // Create stats panel close button if it doesn't exist
+    if (document.getElementById('statsPanel') && !document.querySelector('.stats-panel-close')) {
+        const closeButton = document.createElement('div');
+        closeButton.className = 'stats-panel-close';
+        closeButton.textContent = '×';
+        closeButton.addEventListener('click', toggleStatsPanel);
+        document.querySelector('.stats-panel-content').appendChild(closeButton);
+    }
 }
 
 // Add territory system stats to the UI
@@ -879,20 +976,15 @@ function addSettingsButton() {
     }
 }
 
-// Cập nhật thêm các hàm UI cho thêm vào initUI()
-function extendUI() {
-    // Thêm nút cài đặt
-    addSettingsButton();
-    
-    // Thêm CSS cho menu cài đặt nếu chưa có
-    addSettingsStyles();
-}
-
 // Tạo thanh vũ khí mới + hiển thị đuốc
 function createBottomBar() {
     // Xóa thanh vũ khí cũ nếu có
     const oldSelector = document.getElementById('weaponSelector');
     if (oldSelector) oldSelector.remove();
+    
+    // Xóa thanh vũ khí dưới nếu đã có
+    const oldBottomBar = document.getElementById('bottomBar');
+    if (oldBottomBar) oldBottomBar.remove();
     
     // Tạo container chính
     const bottomBar = document.createElement('div');
@@ -904,16 +996,16 @@ function createBottomBar() {
     weaponBar.id = 'weaponBar';
     weaponBar.className = 'weapon-bar';
     
-    // Tạo 5 ô vũ khí cố định
+    // Tạo 5 ô vũ khí cố định (từ 1-5)
     for (let i = 0; i < 5; i++) {
         const slot = document.createElement('div');
         slot.className = 'weapon-slot empty';
         slot.dataset.index = i;
         
-        // Thêm số ô
+        // Thêm số ô (1-5 thay vì 6-10)
         const slotNumber = document.createElement('div');
         slotNumber.className = 'slot-number';
-        slotNumber.textContent = (i + 1);
+        slotNumber.textContent = (i + 1); // Số từ 1-5
         slot.appendChild(slotNumber);
         
         // Thêm sự kiện click
@@ -975,18 +1067,23 @@ function updateBottomBar() {
     }
     
     // Cập nhật các ô vũ khí
-    const slots = document.querySelectorAll('.weapon-slot');
+    const slots = document.querySelectorAll('#weaponBar .weapon-slot');
     
     slots.forEach((slot, index) => {
         // Reset trạng thái
         slot.className = 'weapon-slot empty';
+        
+        // Xóa tất cả các phần tử con trừ số ô
+        const slotNumber = slot.querySelector('.slot-number');
         slot.innerHTML = '';
         
-        // Thêm số ô
-        const slotNumber = document.createElement('div');
-        slotNumber.className = 'slot-number';
-        slotNumber.textContent = (index + 1);
-        slot.appendChild(slotNumber);
+        // Thêm lại số ô (đảm bảo số từ 1-5)
+        if (slotNumber) {
+            const newSlotNumber = document.createElement('div');
+            newSlotNumber.className = 'slot-number';
+            newSlotNumber.textContent = (index + 1); // Số từ 1-5
+            slot.appendChild(newSlotNumber);
+        }
         
         const weaponId = player.equippedWeapons[index];
         
@@ -1325,4 +1422,40 @@ function addSettingsStyles() {
     
     // Thêm vào head
     document.head.appendChild(style);
+
+    // Stats button event listener
+    document.getElementById('statsButton').addEventListener('click', toggleStatsPanel);
+    document.querySelector('.stats-panel-close').addEventListener('click', toggleStatsPanel);
+}
+
+// Toggle stats panel visibility
+function toggleStatsPanel() {
+    const statsPanel = document.getElementById('statsPanel');
+    const isVisible = statsPanel.style.display === 'block';
+    
+    if (isVisible) {
+        statsPanel.style.display = 'none';
+    } else {
+        statsPanel.style.display = 'block';
+        updateStatsPanel(); // Update the stats when showing panel
+    }
+}
+
+// Update stats panel with current values
+function updateStatsPanel() {
+    // Game stats
+    document.getElementById('stats-level').textContent = player.level;
+    document.getElementById('stats-coins').textContent = formatNumber(player.coins);
+    document.getElementById('stats-kills').textContent = formatNumber(player.kills);
+    document.getElementById('stats-explored').textContent = player.exploredSections.size;
+    document.getElementById('stats-distance').textContent = Math.floor(distance(player.x, player.y, player.startX, player.startY));
+    document.getElementById('stats-territories').textContent = player.territoriesClaimed;
+    document.getElementById('stats-torches').textContent = player.torchCount;
+    document.getElementById('stats-sectionsCleared').textContent = player.sectionCleared;
+    
+    // Character stats
+    document.getElementById('stats-baseDamage').textContent = Math.round(player.baseDamage);
+    document.getElementById('stats-critChance').textContent = Math.round(player.critChance);
+    document.getElementById('stats-moveSpeed').textContent = player.speed.toFixed(1);
+    document.getElementById('stats-fireRate').textContent = (1000 / player.weapon.fireRate).toFixed(1);
 }

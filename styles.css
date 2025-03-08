@@ -988,3 +988,117 @@ body {
     overflow: hidden;
     background-color: rgba(5, 10, 15, 0.8);
   }
+
+  /* Stats Button & Panel */
+#statsButton {
+    background: linear-gradient(to bottom, #2a5080, #1a3050);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+#statsButton:hover {
+    background: linear-gradient(to bottom, #3a6090, #2a4060);
+}
+
+.stats-panel {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    width: 300px;
+    background-color: rgba(5, 10, 20, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(80, 130, 170, 0.4);
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 100, 200, 0.3);
+    z-index: 50;
+    transition: all 0.3s ease;
+}
+
+.stats-panel-content {
+    padding: 15px;
+    position: relative;
+}
+
+.stats-panel-content h2 {
+    font-family: 'Orbitron', sans-serif;
+    color: #7ac6ff;
+    margin-bottom: 15px;
+    text-align: center;
+    text-shadow: 0 0 5px rgba(122, 198, 255, 0.5);
+}
+
+.stats-panel-content h3 {
+    font-family: 'Orbitron', sans-serif;
+    color: #7ac6ff;
+    margin: 10px 0 5px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #444;
+}
+
+.stats-panel-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    color: #AAA;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.stats-panel-close:hover {
+    color: #FFF;
+    transform: scale(1.2);
+}
+
+.stats-panel .stats-section {
+    background-color: rgba(30, 30, 40, 0.6);
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+}
+
+.top-action-buttons {
+    position: absolute;
+    top: 30px;
+    left: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 10;
+}
+
+.top-action-buttons .action-button {
+    background-color: rgba(10, 20, 35, 0.8);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(80, 130, 170, 0.4);
+    box-shadow: 0 0 15px rgba(0, 100, 200, 0.2);
+}
+
+/* Coin display ở trên */
+.top-coin-display {
+    position: absolute;
+    top: 90px;
+    left: 20px;
+    background-color: rgba(10, 20, 35, 0.8);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(80, 130, 170, 0.4);
+    box-shadow: 0 0 15px rgba(0, 100, 200, 0.2);
+    border-radius: 8px;
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 10;
+    color: #FFD700;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+}
+
+.coin-icon {
+    font-size: 18px;
+}
+
+.coin-value {
+    color: #FFD700;
+    text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+}

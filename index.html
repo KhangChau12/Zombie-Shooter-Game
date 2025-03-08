@@ -11,7 +11,19 @@
 <body>
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
-        
+
+        <div class="top-action-buttons">
+            <button id="statsButton" class="action-button">Stats</button>
+            <button id="shopButton" class="action-button">Shop (E)</button>
+            <button id="weaponUpgradeButton" class="action-button">Upgrade Weapon</button>
+            <button id="settingsButton" class="action-button">Settings</button>
+        </div>
+
+        <div id="topCoinDisplay" class="top-coin-display">
+            <span class="coin-icon">💰</span>
+            <span class="coin-value" id="topCoins">0</span>
+        </div>
+
         <div id="gameUI">
             <div class="ui-section">
                 <div class="stat-header">Health <span id="health">100</span>/<span id="maxHealth">100</span></div>
@@ -34,36 +46,38 @@
                     <div class="stat-bar-fill ammo-bar-fill" id="ammoBar"></div>
                 </div>
             </div>
-            
-            <div class="ui-section stats-section">
-                <div class="stat-row">Level: <span id="level">1</span></div>
-                <div class="stat-row">Coins: <span id="coins">0</span></div>
-                <div class="stat-row">Kills: <span id="kills">0</span></div>
-                <div class="stat-row">Explored: <span id="explored">0</span></div>
-                <div class="stat-row">Distance: <span id="distance">0</span>m</div>
-                <div class="stat-row">Territories: <span id="territories">0</span></div>
-                <div class="stat-row">Torches: <span id="torches">3</span></div>
-                <div class="stat-row">Cleared: <span id="sectionsCleared">0</span></div>
-            </div>
-            
-            <div class="ui-section">
-                <div class="player-stats-header">Character Stats</div>
-                <div class="stat-row">Base Damage: <span id="baseDamage">10</span></div>
-                <div class="stat-row">Crit Chance: <span id="critChance">5</span>%</div>
-                <div class="stat-row">Move Speed: <span id="moveSpeed">5</span></div>
-                <div class="stat-row">Fire Rate: <span id="fireRate">2.9</span>/s</div>
-            </div>
-            
-            <div class="action-buttons">
-                <button id="shopButton" class="action-button">Shop (E)</button>
-                <button id="weaponUpgradeButton" class="action-button">Upgrade Weapon</button>
+        </div>
+        
+        <!-- Stats Panel (Hidden by default) -->
+        <div id="statsPanel" class="stats-panel" style="display: none;">
+            <div class="stats-panel-content">
+                <h2>Player Statistics</h2>
+                <div class="stats-panel-close">×</div>
+                <div class="stats-section">
+                    <h3>Game Stats</h3>
+                    <div class="stat-row">Level: <span id="stats-level">1</span></div>
+                    <div class="stat-row">Coins: <span id="stats-coins">0</span></div>
+                    <div class="stat-row">Kills: <span id="stats-kills">0</span></div>
+                    <div class="stat-row">Explored: <span id="stats-explored">0</span></div>
+                    <div class="stat-row">Distance: <span id="stats-distance">0</span>m</div>
+                    <div class="stat-row">Territories: <span id="stats-territories">0</span></div>
+                    <div class="stat-row">Torches: <span id="stats-torches">3</span></div>
+                    <div class="stat-row">Cleared: <span id="stats-sectionsCleared">0</span></div>
+                </div>
+                <div class="stats-section">
+                    <h3>Character Stats</h3>
+                    <div class="stat-row">Base Damage: <span id="stats-baseDamage">10</span></div>
+                    <div class="stat-row">Crit Chance: <span id="stats-critChance">5</span>%</div>
+                    <div class="stat-row">Move Speed: <span id="stats-moveSpeed">5</span></div>
+                    <div class="stat-row">Fire Rate: <span id="stats-fireRate">2.9</span>/s</div>
+                </div>
             </div>
         </div>
         
         <div id="minimap"></div>
         
         <!-- Weapon selector for quick switching -->
-        <div id="weaponSelector" class="weapon-selector">
+        <div id="weaponSelector" class="weapon-selector" style="display: none;">
             <!-- Will be populated dynamically -->
         </div>
         

@@ -31,7 +31,7 @@ const CONFIG = {
         ZOMBIE_DAMAGE: 2,        // Damage per second to zombies in territory
         HOME_RADIUS: 150,        // Home base radius
         HOME_BONUS_MULTIPLIER: 1.5, // Bonus multiplier for effects near home
-        TORCH_INITIAL: 3,        // Starting number of torches
+        TORCH_INITIAL: 4,        // Starting number of torches
         TORCH_RADIUS: 15,        // Visual radius of torch
         TORCH_LIGHT_RADIUS: 375,  // Light radius of torch
         TORCH_COST: 150,         // Cost to buy a new torch
@@ -173,17 +173,17 @@ const CONFIG = {
     TREASURE_CHEST: {
         RADIUS: 20,
         COMMON_LOOT: [
-            { type: 'coins', value: [100, 200] },
+            { type: 'coins', value: [1000, 2000] },
             { type: 'ammo', value: [0.5, 1] }, // Multiplier of pack size
             { type: 'health', value: [20, 40] }
         ],
         UNCOMMON_LOOT: [
-            { type: 'coins', value: [200, 400] },
+            { type: 'coins', value: [2000, 4000] },
             { type: 'attachment', rarity: 'common', chance: 0.7 },
             { type: 'torch', value: 1 }
         ],
         RARE_LOOT: [
-            { type: 'coins', value: [300, 600] },
+            { type: 'coins', value: [3000, 6000] },
             { type: 'attachment', rarity: 'uncommon', chance: 0.6 },
             { type: 'attachment', rarity: 'rare', chance: 0.3 },
             { type: 'torch', value: 2 }
@@ -192,7 +192,7 @@ const CONFIG = {
     
     // XP and leveling
     XP_TO_FIRST_LEVEL: 100,
-    XP_LEVEL_MULTIPLIER: 1.2,
+    XP_LEVEL_MULTIPLIER: 1.1,
     
     // Zombie types and properties
     ZOMBIE_TYPES: {
