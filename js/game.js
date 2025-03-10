@@ -1,5 +1,10 @@
 // Main game logic and initialization
 
+// Global variables for zombie evolution system
+let zombieEvolutionLevel = 0;
+let nextEvolutionTime = 0;
+let evolutionTimer = 0;
+
 // Initialize game
 function initGame() {
     // Get canvas and context
@@ -25,7 +30,7 @@ function initGame() {
     
     // Initialize UI
     initUI();
-    
+
     // Create all necessary UI elements
     createUIElements();
 
@@ -44,6 +49,11 @@ function initGame() {
         spawnZombie(player.x + 200, player.y + 200, 1);
         console.log("Test zombie spawned!");
     }, 1000);
+
+    // Initialize zombie evolution
+    zombieEvolutionLevel = 0;
+    nextEvolutionTime = performance.now() + CONFIG.ZOMBIE_EVOLUTION.EVOLUTION_INTERVAL;
+    evolutionTimer = CONFIG.ZOMBIE_EVOLUTION.EVOLUTION_INTERVAL;
 }
 
 // Main game loop
@@ -82,6 +92,7 @@ function update(currentTime) {
         
         updateEffects(deltaTime);
         updatePickups(deltaTime);
+        attractPickups(deltaTime);
         
         // Check all territory effects
         checkAllTerritoryEffects();
@@ -113,10 +124,16 @@ function update(currentTime) {
             drawTerritoryIndicator();
         }
         
+        updateZombieEvolutionTimer(deltaTime);
+
+        // Draw evolution timer
+        drawEvolutionTimer();
+
         // Draw section clearing progress if player is in an uncleared section
         drawSectionClearingProgress();
+
+        updateEvolutionUI();
     }
-    
     gameLoop = requestAnimationFrame(update);
 }
 
@@ -431,6 +448,30 @@ function drawPlayer() {
     // Show ammo count
     const ammoText = `${player.weapon.ammo}/${player.ammunition[player.weapon.ammoType].reserve}`;
     ctx.fillText(ammoText, screenX, screenY + player.radius + 30);
+
+    const attractionRange = player.pickupAttractionRange * player.pickupAttractionMultiplier;
+    
+    // Hiệu ứng dao động nhẹ
+    const pulseScale = 0.9 + Math.sin(performance.now() / 300) * 0.15;
+    
+    // Vẽ vòng tròn với độ mờ thấp
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, attractionRange * 1.25 * pulseScale, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Vẽ các chấm nhỏ xung quanh đường tròn
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    const numDots = 16;
+    for (let i = 0; i < numDots; i++) {
+        const angle = (i / numDots) * Math.PI * 2 + (performance.now() / 1500);
+        const dotX = screenX + Math.cos(angle) * (attractionRange * 1.25 * pulseScale);
+        const dotY = screenY + Math.sin(angle) * (attractionRange * 1.25 * pulseScale);
+        
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
 }
 
 // Draw weapon selector UI
@@ -441,53 +482,6 @@ function drawWeaponSelector() {
 
 // Draw torch indicator
 function drawTorchIndicator() {
-    const padding = 20;
-    const iconSize = 30;
-    const textOffset = 5;
-    
-    // Position in the top-right corner
-    const x = canvas.width - padding - iconSize;
-    const y = padding + iconSize;
-    
-    // Draw torch icon
-    ctx.fillStyle = '#A0522D'; // Brown torch handle
-    ctx.fillRect(x - 2, y - iconSize/2, 4, iconSize/2);
-    
-    // Draw torch head
-    ctx.fillStyle = '#FFA500'; // Orange flame
-    ctx.beginPath();
-    ctx.arc(x, y - iconSize/2, 8, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Animate flame
-    const time = performance.now() / 200;
-    const flameHeight = 10 + Math.sin(time) * 3;
-    
-    // Create flame gradient
-    const gradient = ctx.createRadialGradient(
-        x, y - iconSize/2 - 5, 2,
-        x, y - iconSize/2 - 5, flameHeight
-    );
-    gradient.addColorStop(0, 'rgba(255, 255, 0, 0.9)');
-    gradient.addColorStop(0.4, 'rgba(255, 165, 0, 0.7)');
-    gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
-    
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(x, y - iconSize/2 - 5, flameHeight, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Draw count text
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '18px Orbitron';
-    ctx.textAlign = 'right';
-    ctx.fillText(`${player.torchCount}`, x - iconSize/2 - textOffset, y);
-    
-    // Draw F key indicator
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.font = '12px Orbitron';
-    ctx.fillText('[F]', x - iconSize/2 - textOffset, y + 15);
-}function drawTorchIndicator() {
     const padding = 20;
     const iconSize = 30;
     const textOffset = 5;
@@ -600,18 +594,19 @@ function drawSectionClearingProgress() {
     // Calculate progress
     const progress = ((currentSection.zombiesTotal - currentSection.zombiesRemaining) / currentSection.zombiesTotal) * 100;
     
-    // Draw progress bar at the top center of screen
-    const barWidth = 200;
-    const barHeight = 20;
-    const barX = (canvas.width - barWidth) / 2;
-    const barY = 20;
+    // Draw progress bar in the bottom-right corner
+    const barWidth = 250; // Tăng kích thước từ 180 lên 250
+    const barHeight = 15;
+    const padding = 20;
+    const barX = canvas.width - barWidth - padding;
+    const barY = canvas.height - barHeight - padding - 50; // Position above the weapon bar
     
     // Draw background container
     ctx.fillStyle = 'rgba(10, 20, 35, 0.75)';
     ctx.strokeStyle = 'rgba(80, 130, 170, 0.6)';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(barX - 10, barY - 10, barWidth + 20, barHeight + 40, 8);
+    ctx.roundRect(barX - 10, barY - 30, barWidth + 20, barHeight + 45, 8); // Tăng chiều cao container
     ctx.fill();
     ctx.stroke();
     
@@ -622,7 +617,7 @@ function drawSectionClearingProgress() {
     ctx.fillText(
         `SECTION CLEARING: ${Math.floor(progress)}%`, 
         barX + barWidth / 2, 
-        barY + 5
+        barY - 10
     );
     
     // Draw background
@@ -630,7 +625,7 @@ function drawSectionClearingProgress() {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(barX, barY + 15, barWidth, barHeight, 5);
+    ctx.roundRect(barX, barY, barWidth, barHeight, 5);
     ctx.fill();
     ctx.stroke();
     
@@ -641,24 +636,266 @@ function drawSectionClearingProgress() {
     
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.roundRect(barX, barY + 15, barWidth * (progress / 100), barHeight, 5);
+    ctx.roundRect(barX, barY, barWidth * (progress / 100), barHeight, 5);
     ctx.fill();
     
     // Add glow effect
     ctx.shadowColor = 'rgba(255, 0, 0, 0.5)';
     ctx.shadowBlur = 10;
     ctx.beginPath();
-    ctx.roundRect(barX, barY + 15, barWidth * (progress / 100), barHeight, 5);
+    ctx.roundRect(barX, barY, barWidth * (progress / 100), barHeight, 5);
     ctx.fill();
     ctx.shadowBlur = 0;
     
-    // Draw zombies remaining
+    // Draw zombies remaining - Sử dụng text container rộng hơn
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.font = '12px Orbitron';
     ctx.textAlign = 'center';
     ctx.fillText(
         `${currentSection.zombiesRemaining}/${currentSection.zombiesTotal} zombies remaining`, 
         barX + barWidth / 2, 
-        barY + barHeight + 30
+        barY + barHeight + 15
     );
 }
+
+// Update the zombie evolution timer
+function updateZombieEvolutionTimer(deltaTime) {
+    const currentTime = performance.now();
+    
+    // Update time remaining
+    evolutionTimer = Math.max(0, nextEvolutionTime - currentTime);
+    
+    // Check if it's time for evolution
+    if (currentTime >= nextEvolutionTime && 
+        zombieEvolutionLevel < CONFIG.ZOMBIE_EVOLUTION.MAX_EVOLUTIONS) {
+        
+        // Increase zombie power
+        zombieEvolutionLevel++;
+        
+        // Set next evolution time
+        nextEvolutionTime = currentTime + CONFIG.ZOMBIE_EVOLUTION.EVOLUTION_INTERVAL;
+        evolutionTimer = CONFIG.ZOMBIE_EVOLUTION.EVOLUTION_INTERVAL;
+        
+        // Create evolution effect
+        triggerEvolutionEffect();
+        
+        // Show message
+        showGameMessage(`ZOMBIES EVOLVED (Tier ${zombieEvolutionLevel})! +5% to all stats`);
+    }
+}
+
+// Create visual effect for evolution
+function triggerEvolutionEffect() {
+    // Create screen flash
+    createScreenFlash('evolution');
+    
+    // Show announcement
+    showEvolutionAnnouncement();
+    
+    // Create wave effect at all zombie locations
+    zombies.forEach(zombie => {
+        createEffect(
+            zombie.x,
+            zombie.y,
+            zombie.radius * 2,
+            1.2, // duration
+            'evolution',
+            {
+                color: getEvolutionColor(zombieEvolutionLevel)
+            }
+        );
+    });
+    
+    // Add global wave
+    createEffect(
+        player.x,
+        player.y,
+        500, // radius
+        2.5, // duration
+        'evolutionWave',
+        {
+            color: getEvolutionColor(zombieEvolutionLevel)
+        }
+    );
+    
+    // Create floating texts around screen edges
+    const edgePositions = [
+        { x: canvas.width * 0.2, y: canvas.height * 0.2 },
+        { x: canvas.width * 0.8, y: canvas.height * 0.2 },
+        { x: canvas.width * 0.2, y: canvas.height * 0.8 },
+        { x: canvas.width * 0.8, y: canvas.height * 0.8 },
+        { x: canvas.width * 0.5, y: canvas.height * 0.2 },
+        { x: canvas.width * 0.5, y: canvas.height * 0.8 }
+    ];
+    
+    // Convert to world coordinates
+    const worldPositions = edgePositions.map(pos => {
+        return {
+            x: pos.x + cameraX,
+            y: pos.y + cameraY
+        };
+    });
+    
+    // Create floating text at each position
+    worldPositions.forEach(pos => {
+        createFloatingText(
+            pos.x,
+            pos.y,
+            "+5% ZOMBIE POWER",
+            getEvolutionColor(zombieEvolutionLevel),
+            2
+        );
+    });
+    
+    // Play evolution sound when ready
+    // playSound('zombieEvolution');
+}
+
+// Get color based on evolution level
+function getEvolutionColor(level) {
+    if (level === 0) return '#FFFFFF';
+    
+    // Use the colors array to cycle through colors as levels increase
+    const colorIndex = (level - 1) % CONFIG.ZOMBIE_EVOLUTION.COLORS.length;
+    return CONFIG.ZOMBIE_EVOLUTION.COLORS[colorIndex];
+}
+
+// Draw the evolution timer
+function drawEvolutionTimer() {
+    // Position at top center
+    const x = canvas.width / 2;
+    const y = 25; // Moved up from 60 to 25
+    const width = 200;
+    const height = 20;
+    
+    // Draw container
+    ctx.fillStyle = 'rgba(10, 20, 35, 0.8)';
+    ctx.strokeStyle = 'rgba(255, 50, 50, 0.8)';
+    ctx.lineWidth = 2;
+    
+    // Create glow effect based on time remaining
+    const timeRatio = evolutionTimer / CONFIG.ZOMBIE_EVOLUTION.EVOLUTION_INTERVAL;
+    const glowIntensity = Math.sin(performance.now() / 300) * 0.2 + 0.8;
+    const pulseSpeed = Math.max(0.5, 2 - timeRatio * 2); // Pulse faster as timer runs down
+    const warningPulse = Math.sin(performance.now() / (300 / pulseSpeed)) * 0.3 + 0.7;
+    
+    // Stronger glow when timer is low
+    if (timeRatio < 0.2) {
+        ctx.shadowColor = 'rgba(255, 50, 50, ' + warningPulse + ')';
+        ctx.shadowBlur = 15;
+    } else {
+        ctx.shadowColor = 'rgba(255, 50, 50, ' + (glowIntensity * 0.5) + ')';
+        ctx.shadowBlur = 8;
+    }
+    
+    // Draw rounded container
+    ctx.beginPath();
+    ctx.roundRect(x - width / 2, y, width, height + 30, 8);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    
+    // Draw level indicator
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 14px Orbitron';
+    ctx.textAlign = 'center';
+    
+    // Get evolution color based on level
+    const evolutionColor = getEvolutionColor(zombieEvolutionLevel);
+    
+    ctx.fillStyle = evolutionColor;
+    ctx.fillText(`ZOMBIE EVOLUTION: TIER ${zombieEvolutionLevel}`, x, y + 15);
+    
+    // Draw time remaining in white
+    ctx.fillStyle = '#FFFFFF';
+    const secondsRemaining = Math.ceil(evolutionTimer / 1000);
+    ctx.font = '12px Orbitron';
+    ctx.fillText(`Next evolution in: ${secondsRemaining}s`, x, y + 35);
+    
+    // Draw the progress bar
+    const barWidth = width - 20;
+    const barHeight = 8;
+    const barX = x - barWidth / 2;
+    const barY = y + 45;
+    
+    // Background
+    ctx.fillStyle = 'rgba(50, 50, 50, 0.5)';
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, barWidth, barHeight, 4);
+    ctx.fill();
+    
+    // Progress fill
+    const fillWidth = barWidth * timeRatio;
+    const gradient = ctx.createLinearGradient(barX, 0, barX + barWidth, 0);
+    gradient.addColorStop(0, 'rgba(255, 50, 50, 0.9)');
+    gradient.addColorStop(1, 'rgba(255, 150, 0, 0.9)');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, fillWidth, barHeight, 4);
+    ctx.fill();
+    
+    // Warning icon if less than 10 seconds
+    if (secondsRemaining <= 10) {
+        ctx.font = '14px Orbitron';
+        ctx.fillStyle = 'rgba(255, 50, 50, ' + warningPulse + ')';
+        ctx.fillText('!', barX - 15, barY + 8);
+        ctx.fillText('!', barX + barWidth + 15, barY + 8);
+    }
+}
+
+// Function to show evolution announcement
+function showEvolutionAnnouncement() {
+    // Create announcement element
+    const announcement = document.createElement('div');
+    announcement.className = 'evolution-announcement';
+    
+    // Set message
+    announcement.innerHTML = `
+        ZOMBIES EVOLVED!<br>
+        <span style="font-size: 24px; color: ${getEvolutionColor(zombieEvolutionLevel)};">
+            TIER ${zombieEvolutionLevel} (+5% ALL STATS)
+        </span>
+    `;
+    
+    // Add to game container
+    document.getElementById('gameContainer').appendChild(announcement);
+    
+    // Remove after animation completes
+    setTimeout(() => {
+        announcement.remove();
+    }, 3000);
+}
+
+// Update evolution UI
+function updateEvolutionUI() {
+    // Update timer if it exists
+    const tierElement = document.getElementById('evolutionTier');
+    const countdownElement = document.getElementById('evolutionCountdown');
+    const progressElement = document.getElementById('evolutionProgress');
+    
+    if (tierElement && countdownElement && progressElement) {
+        // Update tier
+        tierElement.textContent = `TIER ${zombieEvolutionLevel}`;
+        
+        // Update tier color
+        tierElement.style.color = getEvolutionColor(zombieEvolutionLevel);
+        tierElement.style.textShadow = `0 0 8px ${getEvolutionColor(zombieEvolutionLevel)}`;
+        
+        // Update countdown
+        const secondsRemaining = Math.ceil(evolutionTimer / 1000);
+        countdownElement.textContent = `Next evolution in: ${secondsRemaining}s`;
+        
+        // Add warning class when under 10 seconds
+        if (secondsRemaining <= 10) {
+            countdownElement.classList.add('evolution-warning');
+        } else {
+            countdownElement.classList.remove('evolution-warning');
+        }
+        
+        // Update progress bar
+        const timeRatio = evolutionTimer / CONFIG.ZOMBIE_EVOLUTION.EVOLUTION_INTERVAL;
+        progressElement.style.width = `${timeRatio * 100}%`;
+    }
+}
+

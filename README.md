@@ -1,145 +1,101 @@
-# Zombie Shooter Game - Hướng dẫn triển khai
+# Zombie Apocalypse Shooter - Game Guide
 
-## Cấu trúc file
+## Game Overview
 
-Trò chơi được tổ chức thành nhiều file để dễ bảo trì và mở rộng. Dưới đây là cấu trúc thư mục và mô tả chức năng của từng file:
+Zombie Apocalypse Shooter is a top-down action survival game where you must fight against hordes of zombies, claim territories, upgrade your arsenal, and survive as long as possible. The game features an expansive map system, territory control mechanics, weapon customization, and progressive difficulty.
 
-```
-zombie-shooter/
-│
-├── index.html                  # File HTML chính
-├── styles.css                  # CSS chính cho giao diện game
-├── screen-flash.css            # CSS cho hiệu ứng flash màn hình
-│
-├── js/                         # Thư mục chứa code JavaScript
-│   ├── config.js               # Cấu hình và hằng số game
-│   ├── utils.js                # Các hàm tiện ích
-│   ├── player.js               # Hệ thống người chơi
-│   ├── weapons.js              # Hệ thống vũ khí
-│   ├── zombies.js              # Logic zombie và AI
-│   ├── map.js                  # Hệ thống bản đồ và lãnh thổ
-│   ├── ui.js                   # Giao diện người dùng và menu
-│   └── game.js                 # Logic chính của game
-│
-└── assets/                     # (Tùy chọn) Thư mục chứa tài nguyên
-    ├── sounds/                 # Âm thanh
-    └── fonts/                  # Font chữ
-```
+## Game Controls
 
-## Cách triển khai
+- **Movement**: W, A, S, D keys
+- **Aim & Shoot**: Mouse cursor to aim, left-click to shoot
+- **Reload**: R key
+- **Open Shop**: E key or Shop button
+- **Open Upgrade Menu**: Tab key or Upgrade button
+- **Place Torch**: F key (for claiming territory)
+- **Switch Weapons**: Q key (next weapon), Mouse Wheel, or number keys 1-5
+- **Interact with Chests**: Automatic when nearby
 
-1. Tạo thư mục `zombie-shooter` trên máy tính của bạn
+## Core Game Mechanics
 
-2. Tạo cấu trúc thư mục như trên
+### 1. Territory System
+- **Clear Sections**: Each section has a fixed number of zombies to eliminate
+- **Place Torches**: Drop 4 torches in each quadrant of a cleared section to claim it as territory
+- **Visual Indicators**: Quadrants with torches are marked with color
+- **Progress Bar**: Shows the number of torches placed and territory claim progress
+- **Territory Benefits**: Auto health regeneration, damage boost, movement speed boost
+- **Home Base**: Starting area provides stronger territory effects
+- **Minimap Display**: Claimed territories are marked in green with flame icons
 
-3. Sao chép nội dung của mỗi file từ mã nguồn vào file tương ứng
+### 2. Treasure Chests
+- **Appear After Clearing**: Unlock treasure chests after eliminating all zombies in a section
+- **Torch Rewards**: Always receive torches (1-4 depending on probability)
+- **Diverse Rewards**: Coins, ammunition, weapon attachments, health
+- **Automatic Collection**: Approach the chest to collect rewards
 
-4. Đảm bảo tất cả các file script được đặt trong thư mục `js/`
+### 3. Ammunition System
+- **Separate Ammo Types**: Each weapon class has its own ammunition
+- **Magazine & Reserve**: Reload from your ammo reserves like in realistic FPS games
+- **Shop Purchases**: Buy additional ammo with coins at the shop
 
-5. Mở file `index.html` trong trình duyệt web hiện đại để bắt đầu chơi
+### 4. Weapon Upgrade System
+- **Weapon Attachments**: Install scopes, grips, suppressors and other modifications
+- **Weapon Customization**: Upgrade damage, fire rate, accuracy, and more
+- **Quick Switching**: Toggle between up to 5 equipped weapons via the bottom toolbar
 
-## Điều khiển
+### 5. Pickup Attraction System
+- **Magnetic Range**: Items within your attraction radius are pulled toward you
+- **Visual Indicator**: A pulsing circle shows your current attraction range
+- **Upgradeable**: Increase pickup range through character upgrades
 
-- **Di chuyển**: Phím W, A, S, D
-- **Nhắm và bắn**: Chuột
-- **Nạp đạn**: Phím R
-- **Mở cửa hàng**: Phím E hoặc nút Shop
-- **Nâng cấp vũ khí**: Phím Tab hoặc nút Upgrade Weapon
-- **Đặt đuốc lãnh thổ**: Phím F
-- **Chuyển vũ khí**: Phím Q (tiếp theo), cuộn chuột hoặc phím số 1-5
-- **Tương tác với rương**: Tự động khi đến gần
+### 6. Zombie Evolution
+- **Progressive Difficulty**: Zombies evolve and become stronger over time
+- **Evolution Timer**: Shows the countdown to the next zombie evolution
+- **Visual Effects**: Evolved zombies have distinct visual indicators
+- **Tier System**: Each evolution tier increases zombie stats by 10%
 
-## Tính năng chính
+## Zombie Types
 
-### 1. Hệ thống Lãnh thổ
-- **Dọn dẹp Section**: Mỗi section có số lượng zombie cần tiêu diệt cố định
-- **Đặt đuốc đánh dấu**: Đặt 4 đuốc ở 4 góc phần tư của section đã dọn dẹp để biến thành lãnh thổ
-- **Hiệu ứng trực quan**: Phần tư section đã đặt đuốc được đánh dấu bằng màu sắc
-- **Thanh tiến độ**: Hiển thị số lượng đuốc đã đặt và tiến độ chiếm lãnh thổ
-- **Hiệu ứng lãnh thổ**: Tự động hồi máu, tăng sát thương, tăng tốc độ di chuyển
-- **Khu vực nhà chính**: Khu vực xuất phát có hiệu ứng lãnh thổ mạnh hơn
-- **Hiển thị trên minimap**: Section đã chiếm được đánh dấu bằng màu xanh lá và biểu tượng ngọn lửa
+1. **Regular Zombie**: Basic enemy with balanced stats
+2. **Fast Zombie**: Quick movement but lower health
+3. **Tank Zombie**: High health and damage but slow movement
+4. **Boss Zombie**: Extremely powerful with high health and special abilities
 
-### 2. Hệ thống Rương Báu
-- **Mở rương kho báu**: Xuất hiện sau khi dọn sạch zombie trong section
-- **Phần thưởng đuốc**: Luôn nhận được đuốc với số lượng khác nhau (1-4 đuốc tùy theo tỉ lệ)
-- **Phần thưởng đa dạng**: Tiền, đạn, đuốc lãnh thổ, phụ kiện vũ khí
+## Weapons
 
-### 3. Hệ thống Đạn Dược
-- **Kho đạn riêng biệt**: Mỗi loại vũ khí có loại đạn riêng
-- **Nạp đạn từ kho dự trữ**: Hoạt động giống như FPS thực tế
-- **Mua đạn tại cửa hàng**: Bổ sung đạn dự trữ bằng tiền xu
+1. **Pistol**: Starter weapon with balanced stats
+2. **Shotgun**: High damage at close range with multiple pellets
+3. **Assault Rifle**: Rapid-fire weapon with good overall performance
+4. **SMG**: Very high fire rate with lower damage per bullet
+5. **Sniper Rifle**: High damage and accuracy for long-range combat
 
-### 4. Hệ thống Vũ khí Nâng cấp
-- **Phụ kiện vũ khí**: Gắn các phụ kiện (ống ngắm, báng súng, ống giảm thanh...)
-- **Tùy chỉnh vũ khí**: Nâng cấp sát thương, tốc độ bắn, độ chính xác
-- **Chuyển đổi nhanh**: Chuyển đổi giữa tối đa 5 vũ khí đã trang bị với thanh công cụ phía dưới
+## Upgrade System
 
-### 5. Hệ thống UI cải tiến
-- **Thanh tiến độ dọn dẹp section**: Hiển thị tiến trình dọn dẹp zombie
-- **Hiển thị trạng thái lãnh thổ**: Chỉ báo lãnh thổ và các hiệu ứng đang kích hoạt
-- **Chọn vũ khí nhanh**: Thanh công cụ vũ khí trực quan ở phía dưới màn hình
-- **Hiển thị đuốc lãnh thổ**: Hiển thị số lượng đuốc hiện có
-- **Hiển thị số coin**: Hiển thị số tiền xu hiện có phía trên màn hình
-- **Thông báo nhận vật phẩm**: Hiệu ứng thông báo khi nhận vật phẩm mới
+### Character Upgrades
+- **Base Damage**: Increases damage for all weapons
+- **Critical Chance**: Increases probability of critical hits
+- **Max Health**: Improves maximum health capacity
+- **Movement Speed**: Increases player movement speed
+- **Pickup Range**: Expands the area that automatically attracts items
+- **Ammo Reserves**: Increases maximum ammunition capacity
 
-## Cơ chế chiếm lãnh thổ
+### Weapon Upgrades
+- **Damage**: Increases weapon damage output
+- **Fire Rate**: Improves weapon firing speed
+- **Accuracy**: Reduces bullet spread
+- **Reload Time**: Decreases time needed to reload
+- **Ammo Capacity**: Increases magazine size
 
-### Dọn dẹp Section
-1. Mỗi section có một số lượng zombie cố định dựa trên độ khó
-2. Tiêu diệt tất cả zombie để "dọn dẹp" section
-3. Section đã dọn dẹp sẽ hiển thị rương báu và đường kẻ chia 4 phần
-4. Zombie sẽ tiếp tục xuất hiện ở section đã dọn dẹp sau mỗi 2 giây nếu không được đánh dấu là lãnh thổ
+## Strategic Tips
 
-### Đánh dấu Lãnh thổ
-1. Sau khi section đã dọn dẹp, sử dụng đuốc để đánh dấu (phím F)
-2. Section được chia thành 4 phần tư bằng nhau, hiển thị bằng đường kẻ đứt
-3. Mỗi phần tư cần đặt 1 đuốc (tổng cộng 4 đuốc) ở vị trí khác nhau
-4. Mỗi phần tư đã đặt đuốc sẽ được tô màu để dễ nhận biết
-5. Thanh tiến độ hiển thị số lượng đuốc đã đặt (1/4, 2/4, 3/4, 4/4)
-6. Khi đặt đủ 4 đuốc, section sẽ tự động trở thành lãnh thổ
-7. Người chơi nhận bonus XP và hồi máu khi chiếm lãnh thổ thành công
-8. Section đã chiếm được đánh dấu trên minimap với màu xanh lá và biểu tượng ngọn lửa
+1. **Territory Management**: Clear and claim sections near your home base first to create a safe network
+2. **Weapon Selection**: Choose weapons that match your playstyle
+3. **Torch Placement**: Plan your torch placement to maximize territory coverage
+4. **Combat Positioning**: Fight from within your territory for bonuses when possible
+5. **Resource Management**: Balance spending coins between weapons, ammo, and upgrades
+6. **Evolution Timing**: Be prepared for more difficult zombies after each evolution
 
-### Rương Kho Báu
-1. Xuất hiện tại trung tâm section đã dọn dẹp
-2. Mở rương bằng cách đến gần
-3. Luôn nhận được đuốc với số lượng khác nhau:
-   - 20% cơ hội nhận 1 đuốc
-   - 50% cơ hội nhận 2 đuốc
-   - 25% cơ hội nhận 3 đuốc
-   - 5% cơ hội nhận 4 đuốc
-4. Có thể nhận được đạn, tiền xu, phụ kiện vũ khí
+## Technical Requirements
 
-## Cải tiến mới
-
-1. **Hiển thị số coin**: Thêm phần hiển thị số tiền xu phía trên màn hình, giúp người chơi dễ dàng theo dõi số tiền hiện có.
-
-2. **Cải tiến minimap**: Thêm biểu tượng ngọn lửa và màu sắc đặc biệt cho section đã chiếm trên minimap, giúp người chơi dễ dàng nhận biết các khu vực an toàn.
-
-3. **Thanh vũ khí cải tiến**: Thanh vũ khí ở dưới màn hình hiển thị đúng từ 1-5, giúp dễ dàng chuyển đổi giữa các vũ khí bằng phím số tương ứng.
-
-4. **Home Base cải tiến**: Khu vực xuất phát được cải tiến với đầy đủ tính năng, được đánh dấu sẵn là lãnh thổ và có các hiệu ứng tăng cường.
-
-## Mở rộng
-
-Game đã được cấu trúc để dễ dàng mở rộng:
-1. Thêm loại zombie mới trong `config.js` và `zombies.js`
-2. Thêm vũ khí mới trong `weapons.js`
-3. Thêm phụ kiện mới trong `config.js` (phần ATTACHMENTS)
-4. Thêm hiệu ứng lãnh thổ mới trong `player.js` và `zombies.js`
-
-## Chiến lược chơi
-
-1. Dọn dẹp các section gần để xây dựng mạng lưới lãnh thổ an toàn
-2. Mua và nâng cấp vũ khí phù hợp với phong cách chơi
-3. Thu thập phụ kiện để cải thiện hiệu suất vũ khí
-4. Đặt chiến lược sử dụng đuốc để chiếm lãnh thổ hiệu quả
-5. Mở rộng lãnh thổ để có nhiều khu vực an toàn để hồi máu và tái tổ chức
-6. Tiêu diệt zombie từ trong lãnh thổ để nhận hiệu ứng tăng sát thương
-
-## Lưu ý
-
-- Game sử dụng nhiều tính năng JavaScript hiện đại, nên cần trình duyệt cập nhật.
-- Game hiện tại chưa có chức năng lưu trữ, mọi tiến trình sẽ mất khi refresh trang.
-- Để thêm âm thanh, bạn cần tạo hàm `playSound()` trong `utils.js` và bỏ comment các dòng gọi hàm này.
+- Modern web browser with JavaScript enabled
+- Keyboard and mouse
+- The game does not currently save progress between sessions

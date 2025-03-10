@@ -1,5 +1,16 @@
 // Zombies and related functionality
 
+function isInHomeRadius(x, y) {
+    // Calculate distance from home base
+    const distanceFromHome = Math.sqrt(
+        Math.pow(x - player.startX, 2) + 
+        Math.pow(y - player.startY, 2)
+    );
+    
+    // Check if within home radius
+    return distanceFromHome <= CONFIG.TERRITORY.HOME_RADIUS;
+}
+
 // Spawn zombies in discovered map sections
 function spawnZombiesInDiscoveredSections() {
     const currentTime = performance.now();
@@ -85,7 +96,7 @@ function spawnZombiesInDiscoveredSections() {
                     spawnX = section.x;
                     spawnY = section.y + Math.random() * CONFIG.SECTION_SIZE;
                 }
-                
+
                 // Spawn a zombie
                 spawnSectionZombie(spawnX, spawnY, section.difficulty, sectionX, sectionY);
             }
@@ -95,6 +106,16 @@ function spawnZombiesInDiscoveredSections() {
 
 // Spawn a zombie specifically for section clearing
 function spawnSectionZombie(x, y, difficulty, sectionX, sectionY) {
+
+    // NEW: Don't spawn zombies in home radius
+    if (isInHomeRadius(x, y)) {
+        // Find a new position outside the home radius
+        const angle = Math.random() * Math.PI * 2;
+        const distance = CONFIG.TERRITORY.HOME_RADIUS + 50 + Math.random() * 100;
+        x = player.startX + Math.cos(angle) * distance;
+        y = player.startY + Math.sin(angle) * distance;
+    }
+    
     // Determine zombie type based on difficulty and randomness
     let zombieType;
     const rand = Math.random();
@@ -119,14 +140,24 @@ function spawnSectionZombie(x, y, difficulty, sectionX, sectionY) {
     const baseDamage = CONFIG.ZOMBIE_BASE_STATS.damage + difficulty * 2;
     
     // Apply type multipliers
-    const health = baseHealth * zombieConfig.healthMultiplier;
-    const speed = baseSpeed * zombieConfig.speedMultiplier;
-    const damage = baseDamage * zombieConfig.damageMultiplier;
+    let health = baseHealth * zombieConfig.healthMultiplier;
+    let speed = baseSpeed * zombieConfig.speedMultiplier;
+    let damage = baseDamage * zombieConfig.damageMultiplier;
     
     // Calculate XP and coins based on difficulty and type
-    const xpValue = Math.floor(10 * zombieConfig.xpMultiplier * (1 + (difficulty - 1) * 0.2));
-    const coinValue = Math.floor(10 * zombieConfig.coinMultiplier * (1 + (difficulty - 1) * 0.2));
+    let xpValue = Math.floor(10 * zombieConfig.xpMultiplier * (1 + (difficulty - 1) * 0.2));
+    let coinValue = Math.floor(10 * zombieConfig.coinMultiplier * (1 + (difficulty - 1) * 0.2));
     
+    // Apply evolution boost if active
+    if (zombieEvolutionLevel > 0) {
+        const evolutionMultiplier = Math.pow(1 + CONFIG.ZOMBIE_EVOLUTION.POWER_INCREASE, zombieEvolutionLevel);
+        health *= evolutionMultiplier;
+        speed *= evolutionMultiplier;
+        damage *= evolutionMultiplier;
+        coinValue = Math.floor(coinValue * evolutionMultiplier);
+        xpValue = Math.floor(xpValue * evolutionMultiplier);
+    }
+
     // Create the zombie with section clearing flags
     zombies.push({
         x: x,
@@ -168,7 +199,7 @@ function spawnSectionZombie(x, y, difficulty, sectionX, sectionY) {
         // Animations
         animationFrame: 0,
         animationTime: 0,
-        animationSpeed: 0.2 + Math.random() * 0.1, // Slight variation in animation speed
+        animationSpeed: 0.3 + Math.random() * 0.1, // Slight variation in animation speed
         spawnTime: performance.now()
     });
 }
@@ -209,7 +240,7 @@ function spawnZombie(x, y, difficulty) {
     
     // Calculate XP and coins based on difficulty and type
     const xpValue = Math.floor(10 * zombieConfig.xpMultiplier * (1 + (difficulty - 1) * 0.2));
-    const coinValue = Math.floor(10 * zombieConfig.coinMultiplier * (1 + (difficulty - 1) * 0.2));
+    const coinValue = Math.floor(30 * zombieConfig.coinMultiplier * (1 + (difficulty - 1) * 0.2));
     
     // Get section coordinates
     const sectionX = Math.floor(x / CONFIG.SECTION_SIZE);

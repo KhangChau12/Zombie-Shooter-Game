@@ -69,7 +69,12 @@ const player = {
     
     // Statistics
     sectionCleared: 0,
-    territoriesClaimed: 0
+    territoriesClaimed: 0,
+    
+    // New properties for feature enhancements
+    pickupAttractionRange: 100, // Base range for pickup attraction
+    pickupAttractionMultiplier: 1.0, // Multiplier for attraction range (upgradeable)
+    ammoReserveMultiplier: 1.0 // Multiplier for max ammo reserves
 };
 
 // Initialize player for a new game
@@ -81,6 +86,9 @@ function initPlayer() {
     player.startY = 0;
     
     // Reset stats to starting values
+    player.ammoReserveMultiplier = 1.0;
+    player.pickupAttractionRange = 100;
+    player.pickupAttractionMultiplier = 1.0;
     player.radius = CONFIG.PLAYER_START_STATS.radius;
     player.speed = CONFIG.PLAYER_START_STATS.speed;
     player.health = CONFIG.PLAYER_START_STATS.health;
@@ -165,9 +173,13 @@ function initializeAmmunition() {
     // Initialize ammo for each ammo type in config
     for (const ammoType in CONFIG.AMMO_TYPES) {
         const ammoConfig = CONFIG.AMMO_TYPES[ammoType];
+        
+        // Apply the ammo reserve multiplier to maxReserve
+        const adjustedMaxReserve = Math.floor(ammoConfig.maxReserve * player.ammoReserveMultiplier);
+        
         player.ammunition[ammoType] = {
             current: 0,
-            reserve: Math.floor(ammoConfig.maxReserve * 0.3) // Start with 30% of max reserve
+            reserve: Math.floor(adjustedMaxReserve * 0.3) // Start with 30% of max reserve
         };
     }
     
@@ -288,7 +300,7 @@ function checkTerritoryEffects() {
         player.territoryBonus = {
             active: true,
             healthRegen: CONFIG.TERRITORY.HEALTH_REGEN * CONFIG.TERRITORY.HOME_BONUS_MULTIPLIER,
-            speedBoost: CONFIG.TERRITORY.SPEED_BOOST * CONFIG.TERRITORY.HOME_BONUS_MULTIPLIER,
+            speedBoost: CONFIG.TERRITORY.SPEED_BOOST * CONFIG.TERRITORY.HOME_BONUS_MULTIPLIER*0.75,
             damageBoost: CONFIG.TERRITORY.DAMAGE_BOOST * CONFIG.TERRITORY.HOME_BONUS_MULTIPLIER
         };
     } else {
@@ -774,23 +786,24 @@ function claimTerritory(section) {
 }
 
 // Áp dụng nâng cấp cho nhân vật
+// Bổ sung hiệu ứng trực quan cho tất cả loại nâng cấp trong function applyStatUpgrade
 function applyStatUpgrade(upgrade) {
     // Kiểm tra xem thuộc tính tồn tại chưa
     if (!(upgrade.property in player)) {
         console.error(`Property ${upgrade.property} does not exist on player`);
         return false;
     }
-    
+   
     // Áp dụng nâng cấp dựa trên loại
     if (upgrade.value) {
         // Trường hợp tăng giá trị cố định
         player[upgrade.property] += upgrade.value;
-        
+       
         // Giới hạn giá trị tối đa nếu có
         if (upgrade.max && player[upgrade.property] > upgrade.max) {
             player[upgrade.property] = upgrade.max;
         }
-        
+       
         // Hồi máu nếu đặt thuộc tính healOnUpgrade
         if (upgrade.healOnUpgrade && upgrade.property === 'maxHealth') {
             player.health += upgrade.value;
@@ -800,18 +813,259 @@ function applyStatUpgrade(upgrade) {
         player[upgrade.property] *= upgrade.multiplier;
     }
     
-    // Tạo hiệu ứng nâng cấp
-    createEffect(
-        player.x,
-        player.y,
-        40, // radius
-        1, // duration
-        'statUpgrade',
-        {
-            text: `${upgrade.name} +`,
-            color: '#00FF00'
-        }
-    );
+    // Tạo hiệu ứng nâng cấp tùy chỉnh dựa vào loại nâng cấp
+    switch (upgrade.property) {
+        case 'baseDamage':
+            // Hiệu ứng tăng sát thương cơ bản
+            createEffect(
+                player.x,
+                player.y,
+                40, // radius
+                1.2, // duration
+                'statUpgrade',
+                {
+                    text: `+${upgrade.value} Damage`,
+                    color: '#FF4500' // Màu cam đỏ cho sát thương
+                }
+            );
+            
+            // Hiệu ứng vũ khí mạnh hơn
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const distance = 60;
+                setTimeout(() => {
+                    createEffect(
+                        player.x + Math.cos(angle) * distance,
+                        player.y + Math.sin(angle) * distance,
+                        20, // radius
+                        0.8, // duration
+                        'muzzleFlash',
+                        {
+                            color: '#FF4500'
+                        }
+                    );
+                }, i * 100);
+            }
+            break;
+            
+        case 'critChance':
+            // Hiệu ứng tăng tỉ lệ chí mạng
+            createEffect(
+                player.x,
+                player.y,
+                40, // radius
+                1.2, // duration
+                'statUpgrade',
+                {
+                    text: `+${upgrade.value}% Crit`,
+                    color: '#FFD700' // Màu vàng gold cho chí mạng
+                }
+            );
+            
+            // Hiệu ứng lấp lánh chí mạng
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                const distance = 30 + Math.random() * 50;
+                setTimeout(() => {
+                    createEffect(
+                        player.x + Math.cos(angle) * distance,
+                        player.y + Math.sin(angle) * distance,
+                        8 + Math.random() * 5, // radius
+                        0.7 + Math.random() * 0.5, // duration
+                        'critHit',
+                        {
+                            color: '#FFD700'
+                        }
+                    );
+                }, i * 50 + Math.random() * 200);
+            }
+            break;
+            
+        case 'maxHealth':
+            // Hiệu ứng tăng máu tối đa
+            createEffect(
+                player.x,
+                player.y,
+                40, // radius
+                1.2, // duration
+                'statUpgrade',
+                {
+                    text: `+${upgrade.value} Health`,
+                    color: '#FF0000' // Màu đỏ cho máu
+                }
+            );
+            
+            // Hiệu ứng phục hồi tim
+            createEffect(
+                player.x,
+                player.y,
+                50, // radius
+                1.5, // duration
+                'healthPulse',
+                {
+                    color: 'rgba(255, 0, 0, 0.3)'
+                }
+            );
+            
+            // Các trái tim nhỏ bay lên
+            for (let i = 0; i < 8; i++) {
+                const offsetX = (Math.random() - 0.5) * 60;
+                const offsetY = (Math.random() - 0.5) * 60;
+                setTimeout(() => {
+                    createEffect(
+                        player.x + offsetX,
+                        player.y + offsetY,
+                        10, // radius
+                        1.2, // duration
+                        'floatingHeart',
+                        {
+                            text: '❤️',
+                            dy: -40 - Math.random() * 20
+                        }
+                    );
+                }, i * 120);
+            }
+            break;
+            
+        case 'speed':
+            // Hiệu ứng tăng tốc độ
+            createEffect(
+                player.x,
+                player.y,
+                40, // radius
+                1.2, // duration
+                'statUpgrade',
+                {
+                    text: `+10% Speed`,
+                    color: '#00BFFF' // Màu xanh da trời cho tốc độ
+                }
+            );
+            
+            // Hiệu ứng đường chạy tốc độ
+            for (let i = 0; i < 20; i++) {
+                const angle = (i / 20) * Math.PI * 2;
+                setTimeout(() => {
+                    createEffect(
+                        player.x,
+                        player.y,
+                        80, // radius
+                        0.7, // duration
+                        'speedLines',
+                        {
+                            angle: angle,
+                            color: 'rgba(0, 191, 255, 0.5)'
+                        }
+                    );
+                }, i * 30);
+            }
+            break;
+            
+        case 'pickupAttractionMultiplier':
+            // Hiệu ứng tăng phạm vi hút
+            createEffect(
+                player.x,
+                player.y,
+                40, // radius
+                1.2, // duration
+                'statUpgrade',
+                {
+                    text: `+20% Pickup Range`,
+                    color: '#FFFFFF' // Màu trắng cho phạm vi hút
+                }
+            );
+            
+            // Hiệu ứng vòng tròn mở rộng
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    createEffect(
+                        player.x,
+                        player.y,
+                        player.pickupAttractionRange * player.pickupAttractionMultiplier,
+                        1.5, // duration
+                        'ring',
+                        {
+                            color: 'rgba(255, 255, 255, 0.3)'
+                        }
+                    );
+                }, i * 300);
+            }
+            
+            // Hiệu ứng các vật phẩm nhỏ bay về người chơi
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                const distance = player.pickupAttractionRange * 0.8;
+                const endDistance = 20;
+                
+                setTimeout(() => {
+                    const startX = player.x + Math.cos(angle) * distance;
+                    const startY = player.y + Math.sin(angle) * distance;
+                    const endX = player.x + Math.cos(angle) * endDistance;
+                    const endY = player.y + Math.sin(angle) * endDistance;
+                    
+                    createEffect(
+                        startX,
+                        startY,
+                        5, // radius
+                        0.8, // duration
+                        'movingPickup',
+                        {
+                            targetX: endX,
+                            targetY: endY,
+                            color: i % 3 === 0 ? '#FF0000' : (i % 3 === 1 ? '#FFD700' : '#4169E1')
+                        }
+                    );
+                }, i * 50);
+            }
+            break;
+            
+        case 'ammoReserveMultiplier':
+            // Hiệu ứng tăng đạn dự trữ
+            createEffect(
+                player.x,
+                player.y,
+                40, // radius
+                1.2, // duration
+                'statUpgrade',
+                {
+                    text: `+20% Ammo Capacity`,
+                    color: '#FFDD00' // Màu vàng cho đạn
+                }
+            );
+            
+            // Hiệu ứng hộp đạn xung quanh
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const distance = 50;
+                setTimeout(() => {
+                    createEffect(
+                        player.x + Math.cos(angle) * distance,
+                        player.y + Math.sin(angle) * distance,
+                        15, // radius
+                        1, // duration
+                        'ammoBox',
+                        {
+                            color: '#FFDD00'
+                        }
+                    );
+                }, i * 75);
+            }
+            break;
+            
+        default:
+            // Hiệu ứng mặc định cho các nâng cấp khác
+            createEffect(
+                player.x,
+                player.y,
+                40, // radius
+                1, // duration
+                'statUpgrade',
+                {
+                    text: `${upgrade.name} +`,
+                    color: '#00FF00'
+                }
+            );
+            break;
+    }
     
     // Cập nhật UI
     updateUI();

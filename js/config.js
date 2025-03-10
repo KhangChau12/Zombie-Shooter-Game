@@ -11,7 +11,7 @@ const CONFIG = {
     
     // Player settings
     PLAYER_START_STATS: {
-        radius: 20,
+        radius: 30,
         speed: 5,
         health: 100,
         maxHealth: 100,
@@ -29,10 +29,10 @@ const CONFIG = {
         DAMAGE_BOOST: 1.15,      // Damage multiplier in territory
         ZOMBIE_SLOW: 0.7,        // Zombie speed multiplier in territory
         ZOMBIE_DAMAGE: 2,        // Damage per second to zombies in territory
-        HOME_RADIUS: 150,        // Home base radius
+        HOME_RADIUS: 400,        // Home base radius
         HOME_BONUS_MULTIPLIER: 1.5, // Bonus multiplier for effects near home
         TORCH_INITIAL: 4,        // Starting number of torches
-        TORCH_RADIUS: 15,        // Visual radius of torch
+        TORCH_RADIUS: 23,        // Visual radius of torch
         TORCH_LIGHT_RADIUS: 375,  // Light radius of torch
         TORCH_COST: 150,         // Cost to buy a new torch
     },
@@ -171,33 +171,36 @@ const CONFIG = {
     
     // Treasure chests
     TREASURE_CHEST: {
-        RADIUS: 20,
+        RADIUS: 30,
         COMMON_LOOT: [
             { type: 'coins', value: [1000, 2000] },
             { type: 'ammo', value: [0.5, 1] }, // Multiplier of pack size
-            { type: 'health', value: [20, 40] }
+            { type: 'health', value: [20, 40] },
+            { type: 'torch', value: 2 }
         ],
         UNCOMMON_LOOT: [
             { type: 'coins', value: [2000, 4000] },
+            { type: 'ammo', value: [1, 2] },
             { type: 'attachment', rarity: 'common', chance: 0.7 },
-            { type: 'torch', value: 1 }
+            { type: 'torch', value: 3 }
         ],
         RARE_LOOT: [
             { type: 'coins', value: [3000, 6000] },
+            { type: 'ammo', value: [2, 4] },
             { type: 'attachment', rarity: 'uncommon', chance: 0.6 },
             { type: 'attachment', rarity: 'rare', chance: 0.3 },
-            { type: 'torch', value: 2 }
+            { type: 'torch', value: 4 }
         ]
     },
     
     // XP and leveling
     XP_TO_FIRST_LEVEL: 100,
-    XP_LEVEL_MULTIPLIER: 1.1,
+    XP_LEVEL_MULTIPLIER: 1.2,
     
     // Zombie types and properties
     ZOMBIE_TYPES: {
         regular: {
-            radius: 20,
+            radius: 30,
             speedMultiplier: 5,
             healthMultiplier: 1,
             damageMultiplier: 1,
@@ -206,7 +209,7 @@ const CONFIG = {
             coinMultiplier: 1
         },
         fast: {
-            radius: 15,
+            radius: 23,
             speedMultiplier: 7.5, 
             healthMultiplier: 0.7,
             damageMultiplier: 0.8,
@@ -215,7 +218,7 @@ const CONFIG = {
             coinMultiplier: 1.5
         },
         tank: {
-            radius: 30,
+            radius: 45,
             speedMultiplier: 3.5,
             healthMultiplier: 2.5,
             damageMultiplier: 1.5,
@@ -224,7 +227,7 @@ const CONFIG = {
             coinMultiplier: 2.5
         },
         boss: {
-            radius: 40,
+            radius: 60,
             speedMultiplier: 3,
             healthMultiplier: 6,
             damageMultiplier: 2,
@@ -259,26 +262,26 @@ const CONFIG = {
     // Pickups
     PICKUP_TYPES: {
         health: {
-            radius: 10,
+            radius: 15,
             color: '#FF0000',
             value: 20
         },
         ammo: {
-            radius: 10,
+            radius: 15,
             color: '#FFFF00',
             value: 'maxAmmo'
         },
         armor: {
-            radius: 10,
+            radius: 15,
             color: '#4169E1',
             value: 15
         },
         coins: {
-            radius: 8,
+            radius: 12,
             color: '#FFD700'
         },
         torch: {
-            radius: 12,
+            radius: 18,
             color: '#FFA500',
             value: 1
         }
@@ -342,7 +345,7 @@ const CONFIG = {
             description: 'Increase critical hit chance by 5%',
             property: 'critChance',
             value: 5,
-            max: 50
+            max: 100
         },
         {
             name: 'Max Health',
@@ -353,9 +356,39 @@ const CONFIG = {
         },
         {
             name: 'Movement Speed',
-            description: 'Increase movement speed by 5%',
+            description: 'Increase movement speed by 10%',
             property: 'speed',
-            multiplier: 1.05
+            multiplier: 1.1
+        },
+        {
+            name: 'Pickup Range',
+            description: 'Increase pickup attraction range by 20%',
+            property: 'pickupAttractionMultiplier',
+            multiplier: 1.2,
+            max: 5 // Allow up to 5 upgrades (max 2.5x range)
+        },
+        {
+            name: 'Ammo Reserves',
+            description: 'Increase maximum ammo reserves for all weapons by 20%',
+            property: 'ammoReserveMultiplier',
+            multiplier: 1.2,
+            max: 5 // Allow up to 5 upgrades (max 2.5x ammo)
         }
-    ]
+    ],
+
+    // Zombie evolution system
+    ZOMBIE_EVOLUTION: {
+        EVOLUTION_INTERVAL: 45000, // 45 seconds in milliseconds
+        POWER_INCREASE: 0.1, // 5% increase per evolution
+        MAX_EVOLUTIONS: 20, // Cap the evolutions to prevent infinite scaling
+        COLORS: [
+            '#ff3838', // Red
+            '#ff9d00', // Orange
+            '#ffe100', // Yellow
+            '#48ff00', // Lime
+            '#00a1ff', // Light Blue
+            '#7b00ff', // Purple
+            '#ff00c8'  // Pink
+        ]
+    },
 };

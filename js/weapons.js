@@ -9,8 +9,8 @@ const WEAPONS = [
         maxAmmo: 30,
         reloadTime: 2000, // ms
         spread: 0.05, // bullet spread (0 = perfect accuracy)
-        bulletSpeed: 1000,
-        bulletSize: 4,
+        bulletSpeed: 2000,
+        bulletSize: 6,
         bulletLifetime: 0.7, // seconds
         automatic: false,
         description: 'Standard sidearm with balanced stats.',
@@ -38,8 +38,8 @@ const WEAPONS = [
         reloadTime: 2500,
         spread: 0.3,
         pellets: 5,
-        bulletSpeed: 800,
-        bulletSize: 3,
+        bulletSpeed: 1600,
+        bulletSize: 4.5,
         bulletLifetime: 0.5,
         automatic: false,
         description: 'Powerful at close range. Fires multiple pellets.',
@@ -66,8 +66,8 @@ const WEAPONS = [
         maxAmmo: 40,
         reloadTime: 2200,
         spread: 0.08,
-        bulletSpeed: 1100,
-        bulletSize: 3,
+        bulletSpeed: 2200,
+        bulletSize: 4.5,
         bulletLifetime: 0.8,
         automatic: true,
         description: 'Rapid fire weapon with good all-around stats.',
@@ -94,8 +94,8 @@ const WEAPONS = [
         maxAmmo: 60,
         reloadTime: 1800,
         spread: 0.12,
-        bulletSpeed: 950,
-        bulletSize: 2,
+        bulletSpeed: 1900,
+        bulletSize: 3,
         bulletLifetime: 0.6,
         automatic: true,
         description: 'High fire rate, low damage per bullet.',
@@ -122,8 +122,8 @@ const WEAPONS = [
         maxAmmo: 5,
         reloadTime: 3000,
         spread: 0.01,
-        bulletSpeed: 1500,
-        bulletSize: 5,
+        bulletSpeed: 3000,
+        bulletSize: 7.5,
         bulletLifetime: 1.5,
         automatic: false,
         description: 'High damage, accurate shots at long range.',
@@ -346,18 +346,21 @@ function purchaseAmmunition(ammoType) {
         return false;
     }
     
+    // Calculate adjusted max reserve with player's multiplier
+    const adjustedMaxReserve = Math.floor(ammoConfig.maxReserve * player.ammoReserveMultiplier);
+    
     // Check if already at max reserve
-    if (player.ammunition[ammoType].reserve >= ammoConfig.maxReserve) {
+    if (player.ammunition[ammoType].reserve >= adjustedMaxReserve) {
         return false;
     }
     
     // Deduct coins
     player.coins -= ammoConfig.cost;
     
-    // Add ammo
+    // Add ammo with new max limit
     player.ammunition[ammoType].reserve = Math.min(
         player.ammunition[ammoType].reserve + ammoConfig.packSize,
-        ammoConfig.maxReserve
+        adjustedMaxReserve
     );
     
     // Update UI

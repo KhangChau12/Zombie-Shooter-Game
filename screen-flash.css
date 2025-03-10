@@ -23,8 +23,7 @@
 }
 
 .territory-flash {
-    background-color: rgba(0, 255, 100, 0.05); /* Giảm độ đậm */
-    animation: territory-flash-fade 1s ease-out;
+    background-color: rgba(0, 255, 100, 0.2);
 }
 
 .home-flash {
@@ -41,4 +40,66 @@
     0% { opacity: 0; }
     50% { opacity: 0.5; } /* Giảm độ đậm */
     100% { opacity: 0; }
+}
+
+.evolution-flash {
+    background-color: rgba(255, 50, 50, 0.2);
+    animation: evolution-flash-fade 1.5s ease-out;
+}
+
+@keyframes evolution-flash-fade {
+    0% { opacity: 0; }
+    20% { opacity: 0.8; }
+    100% { opacity: 0; }
+}
+
+.evolution-announcement {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 36px;
+    color: #FF3333;
+    text-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    animation: evolution-announce 3s ease-in-out;
+}
+
+@keyframes evolution-announce {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+    15% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    25% { transform: translate(-50%, -50%) scale(1); }
+    75% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+.evolution-timer {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(10, 20, 35, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 50, 50, 0.7);
+    border-radius: 10px;
+    padding: 10px 15px;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+    width: 250px;
+    text-align: center;
+    z-index: 10;
+}
+
+.evolution-warning {
+    animation: pulse-warning 0.8s infinite;
+    color: #ff3838;
+}
+
+@keyframes pulse-warning {
+    0% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 0.6; transform: scale(1); }
 }

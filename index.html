@@ -13,9 +13,8 @@
         <canvas id="gameCanvas"></canvas>
 
         <div class="top-action-buttons">
-            <button id="statsButton" class="action-button">Stats</button>
+            <button id="upgradeButton" class="action-button">Upgrade (Tab)</button>
             <button id="shopButton" class="action-button">Shop (E)</button>
-            <button id="weaponUpgradeButton" class="action-button">Upgrade Weapon</button>
             <button id="settingsButton" class="action-button">Settings</button>
         </div>
 
@@ -76,11 +75,6 @@
         
         <div id="minimap"></div>
         
-        <!-- Weapon selector for quick switching -->
-        <div id="weaponSelector" class="weapon-selector" style="display: none;">
-            <!-- Will be populated dynamically -->
-        </div>
-        
         <!-- Section clearing progress bar -->
         <div id="sectionProgress" class="section-progress">
             <!-- Will be populated dynamically -->
@@ -102,7 +96,48 @@
                 <div id="statUpgradeOptions" class="upgrade-options"></div>
             </div>
         </div>
-        
+
+        <!-- Đảm bảo rằng bạn đã thêm upgradeMenu vào gameContainer -->
+        <div id="upgradeMenu" class="modal">
+            <div class="modal-content">
+                <h2>Upgrade System</h2>
+                <p>Coins: <span id="upgradeCoins">0</span></p>
+                
+                <div class="shop-tabs">
+                    <button class="tab-button active" data-tab="character">Character</button>
+                    <button class="tab-button" data-tab="weapons">Weapons</button>
+                    <button class="tab-button" data-tab="equipment">Equipment</button>
+                </div>
+                
+                <div class="shop-tab-content active" id="character-tab">
+                    <div id="characterStats" class="stats-section">
+                        <!-- Character stats will be populated here -->
+                    </div>
+                    <div id="characterUpgradeOptions" class="upgrade-options">
+                        <!-- Character upgrade options will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="shop-tab-content" id="weapons-tab">
+                    <div id="weaponSelector" class="weapon-selector-upgrade">
+                        <!-- Weapon selector will be populated here -->
+                    </div>
+                    <div id="weaponUpgradeOptions" class="upgrade-options">
+                        <!-- Weapon upgrade options will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="shop-tab-content" id="equipment-tab">
+                    <div id="equipmentOptions" class="equipment-options">
+                        <!-- Equipment options will be populated here -->
+                    </div>
+                </div>
+                
+                <button id="closeUpgradeButton">Back to Game</button>
+            </div>
+        </div>
+
+        <!-- Cập nhật shopMenu với cấu trúc tab mới -->
         <div id="shopMenu" class="modal">
             <div class="modal-content">
                 <h2>Survival Shop</h2>
@@ -110,32 +145,23 @@
                 
                 <div class="shop-tabs">
                     <button class="tab-button active" data-tab="weapons">Weapons</button>
-                    <button class="tab-button" data-tab="upgrades">Upgrades</button>
-                    <button class="tab-button" data-tab="equipment">Equipment</button>
+                    <button class="tab-button" data-tab="ammo">Ammunition</button>
+                    <button class="tab-button" data-tab="others">Others</button>
                 </div>
                 
                 <div class="shop-tab-content active" id="weapons-tab">
                     <div id="weaponOptions" class="shop-options"></div>
                 </div>
                 
-                <div class="shop-tab-content" id="upgrades-tab">
-                    <div id="upgradeOptions" class="shop-options"></div>
+                <div class="shop-tab-content" id="ammo-tab">
+                    <div id="ammoOptions" class="ammo-grid"></div>
                 </div>
                 
-                <div class="shop-tab-content" id="equipment-tab">
-                    <div id="equipmentOptions" class="shop-options"></div>
+                <div class="shop-tab-content" id="others-tab">
+                    <div id="othersOptions" class="others-options"></div>
                 </div>
                 
                 <button id="closeShopButton">Back to Game</button>
-            </div>
-        </div>
-        
-        <div id="weaponUpgradeMenu" class="modal">
-            <div class="modal-content">
-                <h2>Weapon Upgrades</h2>
-                <p>Coins: <span id="weaponUpgradeCoins">0</span></p>
-                <div id="weaponUpgradeOptions" class="upgrade-options"></div>
-                <button id="closeWeaponUpgradeButton">Back to Game</button>
             </div>
         </div>
         

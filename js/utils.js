@@ -464,6 +464,252 @@ function drawEffects() {
                 ctx.fillStyle = effect.color || `rgba(255, 255, 255, ${1 - progress})`;
                 ctx.textAlign = 'center';
                 ctx.fillText(effect.text, screenX, screenY);
+            } else if (effect.type === 'evolution') {
+                // Evolution effect on zombies
+                const progress = effect.timeAlive / effect.duration;
+                const color = effect.color || '#FF0000';
+                
+                ctx.strokeStyle = `${color}`;
+                ctx.lineWidth = 3 * (1 - progress);
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * (1 + progress), 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Add inner glow
+                ctx.fillStyle = `${color.replace(')', ', ' + (0.3 - progress * 0.3) + ')')}`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * (1 + progress * 0.5), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            else if (effect.type === 'evolutionWave') {
+                // Global evolution wave
+                const progress = effect.timeAlive / effect.duration;
+                const color = effect.color || '#FF0000';
+                
+                ctx.strokeStyle = `${color.replace(')', ', ' + (0.8 - progress * 0.8) + ')')}`;
+                ctx.lineWidth = 5 * (1 - progress);
+                ctx.setLineDash([8, 8]);
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * progress, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            else if (effect.type === 'chestDisappear') {
+                // Hiệu ứng phân rã của rương kho báu
+                const fadeProgress = effect.timeAlive / effect.duration;
+                
+                // Vẽ particle biến mất
+                for (let i = 0; i < 12; i++) {
+                    const angle = (i / 12) * Math.PI * 2;
+                    const distance = effect.radius * fadeProgress;
+                    const particleX = screenX + Math.cos(angle) * distance;
+                    const particleY = screenY + Math.sin(angle) * distance;
+                    
+                    const particleSize = (1 - fadeProgress) * 8;
+                    
+                    ctx.fillStyle = effect.color || 'rgba(255, 215, 0, ' + (1 - fadeProgress) + ')';
+                    ctx.beginPath();
+                    ctx.arc(particleX, particleY, particleSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Vẽ hiệu ứng mờ dần ở trung tâm
+                ctx.fillStyle = `rgba(255, 215, 0, ${0.5 * (1 - fadeProgress)})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * (1 - fadeProgress), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            else if (effect.type === 'pickup') {
+                // Pickup attraction effect
+                const progress = effect.timeAlive / effect.duration;
+                
+                ctx.fillStyle = effect.color || `rgba(255, 255, 255, ${(1 - progress) * effect.opacity})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, 2 * (1 - progress), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            else if (effect.type === 'ring') {
+                // Hiệu ứng vòng tròn mở rộng
+                const progress = effect.timeAlive / effect.duration;
+                const ringThickness = 5 * (1 - progress);
+                
+                ctx.strokeStyle = effect.color || `rgba(255, 255, 255, ${1 - progress})`;
+                ctx.lineWidth = ringThickness;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * progress, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            else if (effect.type === 'ammoBox') {
+                // Hiệu ứng hộp đạn
+                const progress = effect.timeAlive / effect.duration;
+                const size = 10 * (1 - progress * 0.5);
+                
+                // Hoạt ảnh nổi lên
+                const floatY = Math.sin(effect.timeAlive * 5) * 3;
+                
+                // Vẽ hộp đạn
+                ctx.fillStyle = effect.color || `rgba(255, 221, 0, ${1 - progress})`;
+                ctx.fillRect(screenX - size/2, screenY - size/2 + floatY, size, size);
+                
+                // Vẽ chi tiết
+                ctx.fillStyle = `rgba(50, 50, 50, ${1 - progress})`;
+                ctx.fillRect(screenX - size/3, screenY - size/4 + floatY, size * 2/3, size/2);
+            }
+            else if (effect.type === 'pickup') {
+                // Hiệu ứng hút vật phẩm
+                const progress = effect.timeAlive / effect.duration;
+                
+                ctx.fillStyle = effect.color || `rgba(255, 255, 255, ${(1 - progress) * effect.opacity})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, 2 * (1 - progress), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            else if (effect.type === 'critHit') {
+                // Hiệu ứng đòn chí mạng lấp lánh
+                const progress = effect.timeAlive / effect.duration;
+                const size = effect.radius * (1 - progress * 0.7);
+                
+                // Vẽ ngôi sao hoặc tia sáng
+                ctx.fillStyle = effect.color || `rgba(255, 215, 0, ${1 - progress})`;
+                
+                // Vẽ ngôi sao
+                const spikes = 5;
+                const outerRadius = size;
+                const innerRadius = size * 0.4;
+                
+                ctx.beginPath();
+                for (let i = 0; i < spikes * 2; i++) {
+                    const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                    const angle = (Math.PI / spikes) * i;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(screenX + Math.cos(angle) * radius, screenY + Math.sin(angle) * radius);
+                    } else {
+                        ctx.lineTo(screenX + Math.cos(angle) * radius, screenY + Math.sin(angle) * radius);
+                    }
+                }
+                ctx.closePath();
+                ctx.fill();
+                
+                // Thêm hiệu ứng lấp lánh
+                ctx.globalAlpha = 0.7 * (1 - progress);
+                const gradient = ctx.createRadialGradient(
+                    screenX, screenY, 0,
+                    screenX, screenY, size * 1.5
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+                gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, size * 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+            else if (effect.type === 'healthPulse') {
+                // Hiệu ứng nhịp tim khi tăng máu
+                const progress = effect.timeAlive / effect.duration;
+                const pulseScale = 1 + Math.sin(progress * Math.PI * 4) * 0.2 * (1 - progress);
+                
+                ctx.fillStyle = effect.color || `rgba(255, 0, 0, ${0.3 * (1 - progress)})`;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * pulseScale, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Thêm đường viền
+                ctx.strokeStyle = `rgba(255, 100, 100, ${0.5 * (1 - progress)})`;
+                ctx.lineWidth = 3 * (1 - progress);
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, effect.radius * pulseScale, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            else if (effect.type === 'floatingHeart') {
+                // Hiệu ứng trái tim nổi lên
+                const progress = effect.timeAlive / effect.duration;
+                
+                // Di chuyển lên trên
+                const offsetY = effect.dy * progress;
+                
+                // Làm mờ dần
+                ctx.globalAlpha = 1 - progress;
+                
+                // Kích thước nhịp nhàng
+                const scale = 1 + Math.sin(progress * Math.PI * 6) * 0.2;
+                
+                // Vẽ biểu tượng trái tim hoặc văn bản
+                ctx.font = `${Math.round(20 * scale)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(effect.text, screenX, screenY + offsetY);
+                
+                ctx.globalAlpha = 1.0;
+            }
+            else if (effect.type === 'speedLines') {
+                // Hiệu ứng đường chạy tốc độ
+                const progress = effect.timeAlive / effect.duration;
+                const angle = effect.angle || 0;
+                
+                const lineLength = effect.radius * (1 - progress * 0.5);
+                const fadeStart = lineLength * 0.7;
+                
+                // Vẽ đường chạy từ tâm ra ngoài
+                ctx.strokeStyle = effect.color || `rgba(0, 191, 255, ${0.5 * (1 - progress)})`;
+                ctx.lineWidth = 2 * (1 - progress);
+                
+                // Tạo gradient mờ dần
+                const gradient = ctx.createLinearGradient(
+                    screenX, screenY,
+                    screenX + Math.cos(angle) * lineLength,
+                    screenY + Math.sin(angle) * lineLength
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                gradient.addColorStop(0.2, effect.color || `rgba(0, 191, 255, ${0.8 * (1 - progress)})`);
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                
+                ctx.strokeStyle = gradient;
+                
+                ctx.beginPath();
+                ctx.moveTo(screenX, screenY);
+                ctx.lineTo(
+                    screenX + Math.cos(angle) * lineLength,
+                    screenY + Math.sin(angle) * lineLength
+                );
+                ctx.stroke();
+            }
+            else if (effect.type === 'movingPickup') {
+                // Hiệu ứng vật phẩm di chuyển về người chơi
+                const progress = effect.timeAlive / effect.duration;
+                
+                // Tính toán vị trí hiện tại dựa trên vị trí ban đầu và đích đến
+                const currentX = screenX + (effect.targetX - effect.x + cameraX) * progress;
+                const currentY = screenY + (effect.targetY - effect.y + cameraY) * progress;
+                
+                // Kích thước nhỏ dần khi đến gần người chơi
+                const size = 5 * (1 - progress * 0.5);
+                
+                // Vẽ vật phẩm
+                ctx.fillStyle = effect.color || '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(currentX, currentY, size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Thêm đuôi mờ dần
+                for (let i = 1; i <= 3; i++) {
+                    const trailProgress = Math.max(0, progress - i * 0.05);
+                    if (trailProgress <= 0) continue;
+                    
+                    const trailX = screenX + (effect.targetX - effect.x + cameraX) * trailProgress;
+                    const trailY = screenY + (effect.targetY - effect.y + cameraY) * trailProgress;
+                    
+                    ctx.globalAlpha = 0.3 * (1 - i/3);
+                    ctx.beginPath();
+                    ctx.arc(trailX, trailY, size * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.globalAlpha = 1.0;
             }
         }
     }
@@ -531,7 +777,7 @@ function handleKeyDown(e) {
         case 'tab': 
             keys.tab = true; 
             e.preventDefault(); // Prevent tab from changing focus
-            if (gameRunning) openWeaponUpgradeMenu();
+            if (gameRunning) openUpgradeMenu();
             break;
         case 'q':
             keys.q = true;
@@ -541,22 +787,12 @@ function handleKeyDown(e) {
             keys.f = true;
             if (gameRunning) placeTorch();
             break;
-        case '1':
-            keys['1'] = true;
-            if (gameRunning && player.equippedWeapons.length > 0) {
-                switchWeapon(player.equippedWeapons[0]);
-            }
-            break;
-        case '2':
-            keys['2'] = true;
-            if (gameRunning && player.equippedWeapons.length > 1) {
-                switchWeapon(player.equippedWeapons[1]);
-            }
-            break;
-        case '3':
-            keys['3'] = true;
-            if (gameRunning && player.equippedWeapons.length > 2) {
-                switchWeapon(player.equippedWeapons[2]);
+        // Number keys for weapon selection
+        case '1': case '2': case '3': case '4': case '5':
+            const index = parseInt(e.key) - 1;
+            keys[e.key] = true;
+            if (gameRunning && player.equippedWeapons.length > index) {
+                switchWeapon(player.equippedWeapons[index]);
             }
             break;
     }
@@ -772,4 +1008,53 @@ function restartGame() {
     
     // Start the game
     gameRunning = true;
+}
+
+function attractPickups(deltaTime) {
+    // Skip if player reference is not available yet
+    if (!player) return;
+    
+    // Calculate the actual attraction range
+    const attractionRange = player.pickupAttractionRange * player.pickupAttractionMultiplier;
+    
+    // Check all pickups
+    for (let i = 0; i < pickups.length; i++) {
+        const pickup = pickups[i];
+        
+        // Calculate distance to player
+        const dx = player.x - pickup.x;
+        const dy = player.y - pickup.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // If pickup is within attraction range, move it toward the player
+        if (distance < attractionRange) {
+            // Calculate attraction strength (stronger when closer)
+            const attractionStrength = 1 - (distance / attractionRange);
+            
+            // Tăng tốc độ bay lên gấp đôi (tăng từ 300 lên 600)
+            const speed = 600 * attractionStrength; // Tăng tốc độ di chuyển
+            
+            // Move the pickup toward the player
+            const directionX = dx / distance;
+            const directionY = dy / distance;
+            
+            pickup.x += directionX * speed * deltaTime;
+            pickup.y += directionY * speed * deltaTime;
+            
+            // Add a visual trail effect for attracted pickups
+            if (Math.random() < 0.2) { // Only create effect occasionally to avoid too many effects
+                createEffect(
+                    pickup.x, 
+                    pickup.y, 
+                    3, // Small radius
+                    0.3, // Short duration
+                    'pickup', // Effect type
+                    {
+                        color: pickup.color || '#FFFFFF',
+                        opacity: 0.5
+                    }
+                );
+            }
+        }
+    }
 }

@@ -481,41 +481,6 @@ function drawBackground() {
     }
 }
 
-// Draw a treasure chest
-function drawTreasureChest(x, y) {
-    // Base of chest
-    ctx.fillStyle = '#8B4513'; // Brown
-    ctx.fillRect(x - 15, y - 10, 30, 20);
-    
-    // Top of chest
-    ctx.fillStyle = '#A0522D'; // Lighter brown
-    ctx.beginPath();
-    ctx.moveTo(x - 15, y - 10);
-    ctx.lineTo(x + 15, y - 10);
-    ctx.lineTo(x + 15, y - 15);
-    ctx.lineTo(x - 15, y - 15);
-    ctx.closePath();
-    ctx.fill();
-    
-    // Gold trim
-    ctx.fillStyle = '#FFD700'; // Gold
-    ctx.fillRect(x - 16, y - 10, 32, 3);
-    ctx.fillRect(x - 16, y + 8, 32, 3);
-    
-    // Keyhole
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(x, y, 3, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Glowing effect to attract attention
-    const pulseScale = 0.8 + Math.sin(performance.now() / 500) * 0.2;
-    ctx.fillStyle = 'rgba(255, 215, 0, ' + pulseScale * 0.3 + ')';
-    ctx.beginPath();
-    ctx.arc(x, y, 25 * pulseScale, 0, Math.PI * 2);
-    ctx.fill();
-}
-
 // Draw a torch
 function drawTorch(x, y, isActive) {
     // Torch stick
@@ -525,7 +490,7 @@ function drawTorch(x, y, isActive) {
     // Torch head
     ctx.fillStyle = '#A0522D'; // Lighter brown
     ctx.beginPath();
-    ctx.arc(x, y - 5, 8, 0, Math.PI * 2);
+    ctx.arc(x, y - 5, 12, 0, Math.PI * 2);
     ctx.fill();
     
     // Flame effect for active torches
@@ -568,19 +533,19 @@ function drawHomeBase(x, y) {
     // Base platform
     ctx.fillStyle = '#555';
     ctx.beginPath();
-    ctx.arc(x, y, 50, 0, Math.PI * 2);
+    ctx.arc(x, y, 100, 0, Math.PI * 2);
     ctx.fill();
     
     // Main building
     ctx.fillStyle = '#777';
     ctx.beginPath();
-    ctx.arc(x, y, 30, 0, Math.PI * 2);
+    ctx.arc(x, y, 60, 0, Math.PI * 2);
     ctx.fill();
     
     // Inner structure
     ctx.fillStyle = '#999';
     ctx.beginPath();
-    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.arc(x, y, 40, 0, Math.PI * 2);
     ctx.fill();
     
     // Center energy core
@@ -589,7 +554,7 @@ function drawHomeBase(x, y) {
     
     ctx.fillStyle = 'rgba(0, 255, 255, ' + pulseScale * 0.8 + ')';
     ctx.beginPath();
-    ctx.arc(x, y, 10 * pulseScale, 0, Math.PI * 2);
+    ctx.arc(x, y, 20 * pulseScale, 0, Math.PI * 2);
     ctx.fill();
     
     // Defensive barriers
@@ -1168,6 +1133,28 @@ function openTreasureChest(section) {
     // Create opening effect
     createTreasureOpenEffect(section.x + CONFIG.SECTION_SIZE / 2, section.y + CONFIG.SECTION_SIZE / 2);
     
+    // Xóa hiệu ứng visual của rương
+    for (let i = effects.length - 1; i >= 0; i--) {
+        const effect = effects[i];
+        if (effect.type === 'treasureChest' && 
+            Math.abs(effect.x - (section.x + CONFIG.SECTION_SIZE / 2)) < 10 && 
+            Math.abs(effect.y - (section.y + CONFIG.SECTION_SIZE / 2)) < 10) {
+            effects.splice(i, 1);
+            break;
+        }
+    }
+
+    // Tạo hiệu ứng biến mất
+    createEffect(
+        section.x + CONFIG.SECTION_SIZE / 2,
+        section.y + CONFIG.SECTION_SIZE / 2,
+        45, // Size phù hợp với chest đã phóng to
+        1, // duration
+        'chestDisappear',
+        {
+            color: 'rgba(255, 215, 0, 0.5)'
+        }
+    );
     // Update UI
     updateUI();
 }
@@ -1219,7 +1206,7 @@ function createTreasureOpenEffect(x, y) {
     );
 }
 
-// Replace the drawTreasureChest function with this enhanced version
+// the drawTreasureChest function
 function drawTreasureChest(x, y) {
     // Animation values
     const time = performance.now();
@@ -1229,42 +1216,42 @@ function drawTreasureChest(x, y) {
     // Glowing effect to attract attention
     ctx.fillStyle = `rgba(255, 215, 0, ${glow})`;
     ctx.beginPath();
-    ctx.arc(x, y + bounce, 30, 0, Math.PI * 2);
+    ctx.arc(x, y + bounce, 30 * 1.5, 0, Math.PI * 2); // Tăng từ 30 lên 45 (30 * 1.5)
     ctx.fill();
     
     // Base of chest
     ctx.fillStyle = '#8B4513'; // Brown
-    ctx.fillRect(x - 15, y - 10 + bounce, 30, 20);
+    ctx.fillRect(x - 15 * 1.5, y - 10 * 1.5 + bounce, 30 * 1.5, 20 * 1.5); // Tăng các kích thước lên 50%
     
     // Top of chest
     ctx.fillStyle = '#A0522D'; // Lighter brown
     ctx.beginPath();
-    ctx.moveTo(x - 15, y - 10 + bounce);
-    ctx.lineTo(x + 15, y - 10 + bounce);
-    ctx.lineTo(x + 15, y - 15 + bounce);
-    ctx.lineTo(x - 15, y - 15 + bounce);
+    ctx.moveTo(x - 15 * 1.5, y - 10 * 1.5 + bounce);
+    ctx.lineTo(x + 15 * 1.5, y - 10 * 1.5 + bounce);
+    ctx.lineTo(x + 15 * 1.5, y - 15 * 1.5 + bounce);
+    ctx.lineTo(x - 15 * 1.5, y - 15 * 1.5 + bounce);
     ctx.closePath();
     ctx.fill();
     
     // Gold trim
     ctx.fillStyle = '#FFD700'; // Gold
-    ctx.fillRect(x - 16, y - 10 + bounce, 32, 3);
-    ctx.fillRect(x - 16, y + 8 + bounce, 32, 3);
+    ctx.fillRect(x - 16 * 1.5, y - 10 * 1.5 + bounce, 32 * 1.5, 3 * 1.5);
+    ctx.fillRect(x - 16 * 1.5, y + 8 * 1.5 + bounce, 32 * 1.5, 3 * 1.5);
     
     // Keyhole
     ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.arc(x, y + bounce, 3, 0, Math.PI * 2);
+    ctx.arc(x, y + bounce, 3 * 1.5, 0, Math.PI * 2); // Tăng từ 3 lên 4.5 (3 * 1.5)
     ctx.fill();
     
     // Draw small stars around chest occasionally
     if (Math.floor(time / 300) % 5 === 0) {
         const angle = (time / 500) % (Math.PI * 2);
-        const starX = x + Math.cos(angle) * 25;
-        const starY = y + Math.sin(angle) * 25 + bounce;
+        const starX = x + Math.cos(angle) * 25 * 1.5;
+        const starY = y + Math.sin(angle) * 25 * 1.5 + bounce;
         
         ctx.fillStyle = '#FFFF00';
-        drawStar(starX, starY, 5, 2, 5);
+        drawStar(starX, starY, 5 * 1.5, 2 * 1.5, 5); // Tăng kích thước sao lên 50%
     }
 }
 
