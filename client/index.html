@@ -6,6 +6,7 @@
     <title>Zombie Apocalypse Shooter</title>
     <link href="styles.css" rel="stylesheet">
     <link href="screen-flash.css" rel="stylesheet">
+    <link href="css/homeScreen.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -86,6 +87,7 @@
                 <p>You survived for <span id="survivalTime">0</span> and killed <span id="finalKills">0</span> zombies</p>
                 <p>Highest level reached: <span id="finalLevel">1</span></p>
                 <button id="restartButton">Play Again</button>
+                <button id="homeButton">Back to Home</button>
             </div>
         </div>
         
@@ -187,24 +189,14 @@
     <script src="js/zombies.js"></script>
     <script src="js/map.js"></script>
     <script src="js/ui.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/homeScreen.js"></script>
     <script src="js/game.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Mở rộng UI với các tính năng bổ sung
             if (typeof extendUI === 'function') {
                 extendUI();
-            }
-            // Start the game directly
-            if (typeof loadGame === 'function') {
-                loadGame();
-            } else {
-                console.error('loadGame function not found');
-                // Try to start the game directly
-                if (typeof initGame === 'function') {
-                    initGame();
-                } else {
-                    console.error('initGame function not found');
-                }
             }
         });
     </script>

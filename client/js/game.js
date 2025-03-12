@@ -7,6 +7,10 @@ let evolutionTimer = 0;
 
 // Initialize game
 function initGame() {
+    // Kiểm tra nếu đang ở home screen thì không khởi tạo game
+    if (window.homeScreen && window.homeScreen.isActive() && !window.homeScreen.isGameStarted()) {
+        return;
+    }
     // Get canvas and context
     canvas = document.getElementById('gameCanvas');
     canvas.width = window.innerWidth;
@@ -58,13 +62,17 @@ function initGame() {
 
 // Main game loop
 function update(currentTime) {
-    // Calculate delta time
-    deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
+    // Tính toán delta time
+    deltaTime = (currentTime - lastTime) / 1000;
     lastTime = currentTime;
-    
-    // Constrain delta time to prevent glitches after tab switch
     deltaTime = Math.min(deltaTime, 0.1);
     
+    // Nếu đang ở màn hình home, không cần vẽ game
+    if (window.homeScreen && window.homeScreen.isActive()) {
+        gameLoop = requestAnimationFrame(update);
+        return;
+    }
+        
     if (gameRunning) {
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);

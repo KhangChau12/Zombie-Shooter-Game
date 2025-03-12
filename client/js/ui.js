@@ -516,6 +516,18 @@
         document.getElementById('finalKills').textContent = formatNumber(player.kills);
         document.getElementById('finalLevel').textContent = player.level;
         document.getElementById('gameOver').style.display = 'flex';
+
+        // Thêm sự kiện cho nút Home nếu chưa có
+        const homeButton = document.getElementById('homeButton');
+        if (homeButton && !homeButton.hasAttribute('data-event-added')) {
+            homeButton.addEventListener('click', function() {
+                document.getElementById('gameOver').style.display = 'none';
+                if (window.homeScreen) {
+                    window.homeScreen.show();
+                }
+            });
+            homeButton.setAttribute('data-event-added', 'true');
+        }
         
         // Add territory stats
         const statsElement = document.createElement('p');
