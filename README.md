@@ -1,101 +1,173 @@
-# Zombie Apocalypse Shooter - Game Guide
+# Zombie Apocalypse Shooter - Game with Cloud Save System
 
-## Game Overview
+## Project Overview
 
-Zombie Apocalypse Shooter is a top-down action survival game where you must fight against hordes of zombies, claim territories, upgrade your arsenal, and survive as long as possible. The game features an expansive map system, territory control mechanics, weapon customization, and progressive difficulty.
+This is a top-down zombie survival shooter game with user authentication and cloud save functionality. Players can register accounts, save their game progress to the cloud, and load saved games across different devices.
+
+## Key Features
+
+### Game Features
+- Top-down action survival gameplay
+- Territory claiming mechanics
+- Weapon upgrade and customization system
+- Multiple zombie types (Regular, Fast, Tank, Boss)
+- Progressive difficulty with zombie evolution
+- Resource management (ammo, health, torches)
+
+### Save System Features
+- User authentication (register/login)
+- Cloud-based save system with 3 save slots per user
+- Screenshot preview of saved games
+- Save/load game progress from any device
+- Delete saved games
+
+## Project Structure
+
+```
+zombie-apocalypse-shooter/
+├── client/                       # Frontend game files
+│   ├── css/                      # CSS stylesheets
+│   │   ├──styles.css             # Main game styles
+│   │   ├──screen-flash.css       # Visual effect styles
+│   │   └── homeScreen.css        # Styles for home and auth screens
+│   ├── js/                       # JavaScript game logic
+│   │   ├── auth.js               # Authentication functionality
+│   │   ├── homeScreen.js         # Home screen and save/load UI
+│   │   ├── config.js             # Game configuration
+│   │   ├── game.js               # Main game loop
+│   │   ├── player.js             # Player logic
+│   │   ├── zombies.js            # Zombie logic
+│   │   ├── map.js                # Map generation
+│   │   ├── weapons.js            # Weapon systems
+│   │   └── ui.js                 # Game UI
+│   ├── index.html                # Main HTML file
+
+│
+├── server/                       # Backend files
+│   ├── config/
+│   │   └── db.js                 # Database configuration
+│   ├── controllers/
+│   │   ├── auth.js               # Authentication logic
+│   │   └── saves.js              # Save game management
+│   ├── middleware/
+│   │   └── auth.js               # JWT authentication middleware
+│   ├── models/
+│   │   ├── User.js               # User data schema
+│   │   └── Save.js               # Save game schema
+│   ├── routes/
+│   │   ├── auth.js               # Auth endpoints
+│   │   └── saves.js              # Save game endpoints
+│   └── server.js                 # Express server setup
+│
+├── .env                          # Environment variables (not in repo)
+├── package.json                  # Project dependencies
+├── Procfile                      # For Render deployment
+└── README.md                     # Project documentation
+```
+
+## Technologies Used
+
+### Frontend
+- Vanilla JavaScript for game logic
+- HTML5 Canvas for rendering
+- CSS for styling
+
+### Backend
+- Node.js with Express
+- MongoDB for database
+- JWT for authentication
+- Bcrypt for password encryption
 
 ## Game Controls
 
 - **Movement**: W, A, S, D keys
 - **Aim & Shoot**: Mouse cursor to aim, left-click to shoot
 - **Reload**: R key
-- **Open Shop**: E key or Shop button
-- **Open Upgrade Menu**: Tab key or Upgrade button
+- **Open Shop**: E key
+- **Open Upgrade Menu**: Tab key
 - **Place Torch**: F key (for claiming territory)
-- **Switch Weapons**: Q key (next weapon), Mouse Wheel, or number keys 1-5
+- **Switch Weapons**: Q key, Mouse Wheel, or number keys 1-5
 - **Interact with Chests**: Automatic when nearby
 
-## Core Game Mechanics
+## Installation and Deployment Instructions
 
-### 1. Territory System
-- **Clear Sections**: Each section has a fixed number of zombies to eliminate
-- **Place Torches**: Drop 4 torches in each quadrant of a cleared section to claim it as territory
-- **Visual Indicators**: Quadrants with torches are marked with color
-- **Progress Bar**: Shows the number of torches placed and territory claim progress
-- **Territory Benefits**: Auto health regeneration, damage boost, movement speed boost
-- **Home Base**: Starting area provides stronger territory effects
-- **Minimap Display**: Claimed territories are marked in green with flame icons
+### Prerequisites
+- Node.js (v14 or newer)
+- MongoDB account (local or MongoDB Atlas)
+- Git
 
-### 2. Treasure Chests
-- **Appear After Clearing**: Unlock treasure chests after eliminating all zombies in a section
-- **Torch Rewards**: Always receive torches (1-4 depending on probability)
-- **Diverse Rewards**: Coins, ammunition, weapon attachments, health
-- **Automatic Collection**: Approach the chest to collect rewards
+### Local Development Setup
 
-### 3. Ammunition System
-- **Separate Ammo Types**: Each weapon class has its own ammunition
-- **Magazine & Reserve**: Reload from your ammo reserves like in realistic FPS games
-- **Shop Purchases**: Buy additional ammo with coins at the shop
+1. **Clone the repository**
+   ```
+   git clone https://github.com/yourusername/zombie-apocalypse-shooter.git
+   cd zombie-apocalypse-shooter
+   ```
 
-### 4. Weapon Upgrade System
-- **Weapon Attachments**: Install scopes, grips, suppressors and other modifications
-- **Weapon Customization**: Upgrade damage, fire rate, accuracy, and more
-- **Quick Switching**: Toggle between up to 5 equipped weapons via the bottom toolbar
+2. **Install dependencies**
+   ```
+   npm install
+   ```
 
-### 5. Pickup Attraction System
-- **Magnetic Range**: Items within your attraction radius are pulled toward you
-- **Visual Indicator**: A pulsing circle shows your current attraction range
-- **Upgradeable**: Increase pickup range through character upgrades
+3. **Create .env file**
+   Create a `.env` file in the root directory with:
+   ```
+   PORT=5000
+   MONGO_URI=your_mongodb_connection_string
+   JWT_SECRET=your_jwt_secret_here
+   ```
 
-### 6. Zombie Evolution
-- **Progressive Difficulty**: Zombies evolve and become stronger over time
-- **Evolution Timer**: Shows the countdown to the next zombie evolution
-- **Visual Effects**: Evolved zombies have distinct visual indicators
-- **Tier System**: Each evolution tier increases zombie stats by 10%
+4. **Set up MongoDB Atlas**
+   - Create an account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+   - Create a new cluster (free tier works)
+   - In "Database Access", create a new database user
+   - In "Network Access", add your IP address or allow access from anywhere (0.0.0.0/0)
+   - Get your connection string from "Connect" → "Connect your application"
 
-## Zombie Types
+5. **Start the development server**
+   ```
+   npm run dev
+   ```
 
-1. **Regular Zombie**: Basic enemy with balanced stats
-2. **Fast Zombie**: Quick movement but lower health
-3. **Tank Zombie**: High health and damage but slow movement
-4. **Boss Zombie**: Extremely powerful with high health and special abilities
+6. **Access the application**
+   Open your browser and navigate to `http://localhost:5000`
 
-## Weapons
+### Deployment to Render
 
-1. **Pistol**: Starter weapon with balanced stats
-2. **Shotgun**: High damage at close range with multiple pellets
-3. **Assault Rifle**: Rapid-fire weapon with good overall performance
-4. **SMG**: Very high fire rate with lower damage per bullet
-5. **Sniper Rifle**: High damage and accuracy for long-range combat
+1. **Create a Render account**
+   Sign up at [render.com](https://render.com) if you don't have an account
 
-## Upgrade System
+2. **Push your code to GitHub**
+   Make sure your project is in a GitHub repository
 
-### Character Upgrades
-- **Base Damage**: Increases damage for all weapons
-- **Critical Chance**: Increases probability of critical hits
-- **Max Health**: Improves maximum health capacity
-- **Movement Speed**: Increases player movement speed
-- **Pickup Range**: Expands the area that automatically attracts items
-- **Ammo Reserves**: Increases maximum ammunition capacity
+3. **Create a new Web Service on Render**
+   - Click "New" → "Web Service"
+   - Connect to your GitHub repository
+   - Configure the service:
+     - Name: Choose a name (e.g., zombie-apocalypse-game)
+     - Runtime: Node
+     - Build Command: `npm install`
+     - Start Command: `npm start`
 
-### Weapon Upgrades
-- **Damage**: Increases weapon damage output
-- **Fire Rate**: Improves weapon firing speed
-- **Accuracy**: Reduces bullet spread
-- **Reload Time**: Decreases time needed to reload
-- **Ammo Capacity**: Increases magazine size
+4. **Configure environment variables**
+   Add the following environment variables:
+   - `PORT`: 10000 (Render's default port)
+   - `MONGO_URI`: Your MongoDB Atlas connection string
+   - `JWT_SECRET`: A strong random string
+   - `NODE_ENV`: production
 
-## Strategic Tips
+5. **Deploy**
+   Click "Create Web Service" and wait for the deployment to complete
 
-1. **Territory Management**: Clear and claim sections near your home base first to create a safe network
-2. **Weapon Selection**: Choose weapons that match your playstyle
-3. **Torch Placement**: Plan your torch placement to maximize territory coverage
-4. **Combat Positioning**: Fight from within your territory for bonuses when possible
-5. **Resource Management**: Balance spending coins between weapons, ammo, and upgrades
-6. **Evolution Timing**: Be prepared for more difficult zombies after each evolution
+6. **Access your deployed application**
+   Once deployment is complete, you can access your game at the URL provided by Render
 
-## Technical Requirements
+## Important Notes
 
-- Modern web browser with JavaScript enabled
-- Keyboard and mouse
-- The game does not currently save progress between sessions
+- The backend API URL in `client/js/auth.js` must match your deployment URL
+- Make sure your MongoDB database is properly secured
+- Keep your JWT_SECRET secure and never expose it in client-side code
+- Regularly backup your database to prevent data loss
+
+## License
+This project is licensed under the MIT License - see the LICENSE file for details.
